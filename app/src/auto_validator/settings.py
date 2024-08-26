@@ -68,8 +68,12 @@ INSTALLED_APPS = [
     "django_extensions",
     "django_probes",
     "django_structlog",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "drf_spectacular",
     "constance",
     "fingerprint",
+    "storages",
     "auto_validator.core",
 ]
 
@@ -199,7 +203,7 @@ else:
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_CONFIG = {
-    # "PARAMETER": (default-value, "Help text", type),
+    "API_UPLOAD_MAX_SIZE": (100 * 1024 * 1024, "API upload max size in bytes", int),
 }
 
 
@@ -330,3 +334,63 @@ if SENTRY_DSN := env("SENTRY_DSN", default=""):
         ],
     )
     ignore_logger("django.security.DisallowedHost")
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+PROJECT_TITLE = "Auto Validator Initiative"
+PROJECT_DESCRIPTION = "Bittensor Auto Validator Initiative"
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": f"{PROJECT_TITLE} API",
+    "DESCRIPTION": PROJECT_DESCRIPTION,
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+}
+
+
+_STORAGE_BACKEND = env("STORAGE_BACKEND")
+
+
+if _STORAGE_BACKEND == "storages.backends.s3.S3Storage":
+    # Instructions for setting up S3 storage using Backblaze B2:
+    # 1. create bucket
+    #   STORAGE_S3_BUCKET_NAME=auto-validator-bucket-name
+    #   b2 bucket create "$STORAGE_S3_BUCKET_NAME" allPrivate
+    # 2. create key
+    # returns STORAGE_S3_ACCESS_KEY and STORAGE_S3_SECRET_KEY :
+    #   b2 key create --bucket "$STORAGE_S3_BUCKET_NAME" "${STORAGE_S3_BUCKET_NAME}-key" readFiles,writeFiles,listBuckets,listFiles
+    # 3.
+    #   echo STORAGE_S3_ENDPOINT_URL=`b2 account get | jq -r '.s3endpoint'`
+    # 4.
+    #   echo STORAGE_S3_REGION_NAME=`b2 account get | jq '.s3endpoint | split(".")[1]'`
+    _STORAGE_BACKEND_OPTIONS = {
+        "access_key": env("STORAGE_S3_ACCESS_KEY"),
+        "secret_key": env("STORAGE_S3_SECRET_KEY"),
+        "bucket_name": env("STORAGE_S3_BUCKET_NAME"),
+        "region_name": env("STORAGE_S3_REGION_NAME"),
+        "endpoint_url": env("STORAGE_S3_ENDPOINT_URL") or None,
+    }
+else:  # e.g. STORAGE_BACKEND == "django.core.files.storage.FileSystemStorage"
+    _STORAGE_BACKEND_OPTIONS = {}
+
+
+STORAGES = {
+    "default": {
+        "BACKEND": _STORAGE_BACKEND,
+        "OPTIONS": _STORAGE_BACKEND_OPTIONS,
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
