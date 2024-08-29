@@ -384,7 +384,7 @@ if _STORAGE_BACKEND == "storages.backends.s3.S3Storage":
 elif _STORAGE_BACKEND == "django.core.files.storage.FileSystemStorage":
     _STORAGE_BACKEND_OPTIONS = {}
 else:
-    raise RuntimeError(f'unsupported STORAGE_BACKEND: {STORAGE_BACKEND}')
+    raise RuntimeError(f"unsupported STORAGE_BACKEND: {STORAGE_BACKEND}")
 
 STORAGES = {
     "default": {
