@@ -381,9 +381,10 @@ if _STORAGE_BACKEND == "storages.backends.s3.S3Storage":
         "region_name": env("STORAGE_S3_REGION_NAME"),
         "endpoint_url": env("STORAGE_S3_ENDPOINT_URL") or None,
     }
-else:  # e.g. STORAGE_BACKEND == "django.core.files.storage.FileSystemStorage"
+elif _STORAGE_BACKEND == "django.core.files.storage.FileSystemStorage":
     _STORAGE_BACKEND_OPTIONS = {}
-
+else:
+    raise RuntimeError(f'unsupported STORAGE_BACKEND: {STORAGE_BACKEND}')
 
 STORAGES = {
     "default": {

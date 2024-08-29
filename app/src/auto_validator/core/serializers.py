@@ -9,7 +9,7 @@ from auto_validator.core.models import UploadedFile
 
 def uploaded_file_size_validator(value):
     if value.size > config.API_UPLOAD_MAX_SIZE:
-        raise serializers.ValidationError("File size should be less than 10MB")
+        raise serializers.ValidationError(f"File size must be < {config.API_UPLOAD_MAX_SIZE}B")
 
 
 class UploadedFileSerializer(serializers.ModelSerializer):
