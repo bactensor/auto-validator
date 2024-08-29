@@ -70,7 +70,7 @@ server {
     access_log                /dev/stdout;
     error_log                 /dev/stderr info;
 
-    client_max_body_size 100M;
+    client_max_body_size 200M;
 
     location /static/ {
         root /srv/;
