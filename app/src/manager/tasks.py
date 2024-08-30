@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @shared_task
 def update_validator_status():
     # Step 1: Get all subnet slots ordered by ID
-    subnet_slots = SubnetSlot.objects.filter().order_by('id')
+    subnet_slots = SubnetSlot.objects.filter().order_by("id")
     total_slots = subnet_slots.count()
 
     if total_slots == 0:
@@ -21,7 +21,7 @@ def update_validator_status():
         return
 
     # Step 2: Get the current slot index from the cache (default to 0)
-    current_index = cache.get('current_subnet_slot_index', 0)
+    current_index = cache.get("current_subnet_slot_index", 0)
 
     # Step 3: Get the next subnet slot to process
     slot = subnet_slots[current_index]
@@ -49,7 +49,8 @@ def update_validator_status():
 
     # Step 5: Update the index to point to the next slot
     next_index = (current_index + 1) % total_slots
-    cache.set('current_subnet_slot_index', next_index)
+    cache.set("current_subnet_slot_index", next_index)
+
 
 def fetch_last_updated_from_metagraph(metagraph, public_key):
     return metagraph.last_update[metagraph.hotkeys.index(public_key)]
