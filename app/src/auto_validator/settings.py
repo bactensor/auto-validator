@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "fingerprint",
     "storages",
     "auto_validator.core",
+    "manager",
 ]
 
 
