@@ -218,9 +218,13 @@ CELERY_BEAT_SCHEDULE = {  # type: ignore
     #     'task': "auto_validator.core.tasks.demo_task",
     #     'args': [2, 2],
     #     'kwargs': {},
-    #     'schedule': crontab(minute=0, hour=0),
-    #     'options': {"time_limit": 300},
+    #     'schedule': timedelta(seconds=30),
+    #     'options': {"time_limit": 10000},
     # },
+    'update-validator-status-every-20-seconds': {
+        'task': 'validator_manager.tasks.update_validator_status',
+        'schedule': timedelta(seconds = 20),  # Every 20 seconds
+    },
 }
 CELERY_TASK_ROUTES = ["auto_validator.celery.route_task"]
 CELERY_TASK_TIME_LIMIT = int(timedelta(minutes=5).total_seconds())
