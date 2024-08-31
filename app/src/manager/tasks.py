@@ -27,7 +27,6 @@ def update_validator_status():
     slot = subnet_slots[current_index]
     blockchain = slot.blockchain
     netuid = slot.netuid
-    bt.subtensor(network="finney")
     # Step 4: Process the selected slot
     try:
         subtensor = bt.subtensor(network=settings.BT_NETWORK_NAME)

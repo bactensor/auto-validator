@@ -222,9 +222,9 @@ CELERY_BEAT_SCHEDULE = {  # type: ignore
     #     'schedule': timedelta(seconds=30),
     #     'options': {"time_limit": 10000},
     # },
-    "update-validator-status-every-20-seconds": {
+    "update-validator-status": {
         "task": "manager.tasks.update_validator_status",
-        "schedule": timedelta(seconds=20),  # Every 20 seconds
+        "schedule": timedelta(seconds=60),
     },
 }
 CELERY_TASK_ROUTES = ["auto_validator.celery.route_task"]

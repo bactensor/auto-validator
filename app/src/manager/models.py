@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Block(models.Model):
-    serial_number = models.IntegerField(unique=True)  # Unique identifier for the block
+    serial_number = models.IntegerField(primary_key=True, unique=True)  # Unique identifier for the block
     timestamp = models.DateTimeField()  # Time when the block was created
 
     def __str__(self):
