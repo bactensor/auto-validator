@@ -75,7 +75,6 @@ INSTALLED_APPS = [
     "fingerprint",
     "storages",
     "auto_validator.core",
-    "manager",
 ]
 
 
@@ -223,7 +222,7 @@ CELERY_BEAT_SCHEDULE = {  # type: ignore
     #     'options': {"time_limit": 10000},
     # },
     "update-validator-status": {
-        "task": "manager.tasks.update_validator_status",
+        "task": "auto_validator.core.tasks.update_validator_status",
         "schedule": timedelta(seconds=60),
     },
 }
