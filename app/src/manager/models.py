@@ -13,6 +13,24 @@ class Subnet(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)  # Additional field for description
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)  # Link to operators
+    running_mainnet = models.BooleanField(default=False)
+    running_testnet = models.BooleanField(default=False)
+
+    def short_registration_indicator(self):
+        mainnet_slots = self.slots.filter(blockchain="mainnet")
+        testnet_slots = self.slots.filter(blockchain="testnet")
+        
+        mainnet_indicator = f"sn{mainnet_slots.first().netuid}" if mainnet_slots.exists() else ""
+        testnet_indicator = f"t{testnet_slots.first().netuid}" if testnet_slots.exists() else ""
+        
+        if mainnet_indicator and testnet_indicator:
+            return f"{mainnet_indicator}{testnet_indicator}"
+        elif mainnet_indicator:
+            return mainnet_indicator
+        elif testnet_indicator:
+            return testnet_indicator
+        else:
+            return "-"
 
     def __str__(self):
         return self.name
@@ -22,6 +40,8 @@ class SubnetSlot(models.Model):
     subnet = models.ForeignKey(Subnet, on_delete=models.CASCADE, related_name="slots")
     blockchain = models.CharField(max_length=50, choices=[("mainnet", "Mainnet"), ("testnet", "Testnet")])
     netuid = models.IntegerField()  # Changed from id_on_chain to netuid
+    registered = models.BooleanField(default=False)  # Registration status
+    maximum_registration_price = models.IntegerField(default=0)  # Maximum registration price
     registration_block = models.ForeignKey(
         "Block", on_delete=models.SET_NULL, null=True, blank=True, related_name="registration_slots"
     )
@@ -30,6 +50,9 @@ class SubnetSlot(models.Model):
     )
     restart_threshold = models.IntegerField(default=0)  # Threshold for restart
     reinstall_threshold = models.IntegerField(default=0)  # Threshold for reinstall
+
+    def registered_status(self):
+        return True if self.registered else False
 
     def __str__(self):
         return f"{self.blockchain} / sn{self.netuid}: {self.subnet.name}"

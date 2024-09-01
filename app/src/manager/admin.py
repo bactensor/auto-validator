@@ -6,15 +6,27 @@ from .models import Block, Hotkey, Operator, Server, Subnet, SubnetSlot, Validat
 # Admin Classes
 @admin.register(Subnet)
 class SubnetAdmin(admin.ModelAdmin):
-    list_display = ("name", "description", "get_operator_count")
+    list_display = (
+        "name",
+        "description",
+        "short_registration_indicator",
+        "running_mainnet",
+        "running_testnet",
+    )
     search_fields = ("name",)
-    list_filter = ("operators",)
 
-    def get_operator_count(self, obj):
-        return obj.operators.count()
+    def running_mainnet(self, obj):
+        return obj.slots.filter(blockchain="mainnet").exists()
+    running_mainnet.boolean = True
+    running_mainnet.short_description = "Mainnet"
 
-    get_operator_count.short_description = "Number of Operators"
-
+    def running_testnet(self, obj):
+        return obj.slots.filter(blockchain="testnet").exists()
+    running_testnet.boolean = True
+    running_testnet.short_description = "Testnet"
+    def short_registration_indicator(self, obj):
+        return obj.short_registration_indicator()
+    short_registration_indicator.short_description = "Registration Indicator"
 
 @admin.register(SubnetSlot)
 class SubnetSlotAdmin(admin.ModelAdmin):
@@ -22,23 +34,28 @@ class SubnetSlotAdmin(admin.ModelAdmin):
         "subnet",
         "blockchain",
         "netuid",
+        "registered",
+        "maximum_registration_price",
         "restart_threshold",
         "reinstall_threshold",
-        "get_registration_block",
-        "get_deregistration_block",
+        "registration_block",
+        "deregistration_block",
     )
     search_fields = ("subnet__name", "netuid")
     list_filter = ("blockchain",)
 
-    def get_registration_block(self, obj):
+    def registered(self, obj):
+        return obj.registered_status()
+
+    def registration_block(self, obj):
         return obj.registration_block.serial_number if obj.registration_block else "N/A"
 
-    get_registration_block.short_description = "Registration Block"
+    registration_block.short_description = "Registration Block"
 
-    def get_deregistration_block(self, obj):
+    def deregistration_block(self, obj):
         return obj.deregistration_block.serial_number if obj.deregistration_block else "N/A"
 
-    get_deregistration_block.short_description = "Deregistration Block"
+    deregistration_block.short_description = "Deregistration Block"
 
 
 @admin.register(ValidatorInstance)
@@ -49,8 +66,11 @@ class ValidatorInstanceAdmin(admin.ModelAdmin):
 
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
-    list_display = ("name", "ip_address", "description", "created_at")
-    search_fields = ("name", "ip_address")
+    list_display = ("name", "ip_address", "validatorinstance", "description", "created_at")
+    search_fields = ("name", "ip_address", "validator_instance__subnet_slot__subnet__name")
+
+    def validatorinstance(self, obj):
+        return obj.validator_instances.hotkey if obj.validator_instances else "N/A"
 
 
 @admin.register(Operator)
