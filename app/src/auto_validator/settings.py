@@ -222,7 +222,7 @@ CELERY_BEAT_SCHEDULE = {  # type: ignore
     #     'options': {"time_limit": 10000},
     # },
     "update-validator-status": {
-        "task": "auto_validator.core.tasks.update_validator_status",
+        "task": "auto_validator.core.tasks.schedule_update_validator_status",
         "schedule": timedelta(seconds=60),
     },
 }
