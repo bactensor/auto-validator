@@ -28,8 +28,8 @@ class UploadedFile(models.Model):
 
 
 class Block(models.Model):
-    serial_number = models.IntegerField(primary_key=True, unique=True)  # Unique identifier for the block
-    timestamp = models.DateTimeField()  # Time when the block was created
+    serial_number = models.IntegerField(primary_key=True, unique=True)
+    timestamp = models.DateTimeField()
 
     def __str__(self):
         return f"{self.serial_number}"
@@ -37,8 +37,8 @@ class Block(models.Model):
 
 class Subnet(models.Model):
     name = models.CharField(max_length=255)
-    description = models.TextField(null=True, blank=True)  # Additional field for description
-    operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)  # Link to operators
+    description = models.TextField(null=True, blank=True) 
+    operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)
 
     def registered_networks(self):
         mainnet_slots = self.slots.filter(blockchain="mainnet", is_registered=True)
@@ -57,9 +57,6 @@ class SubnetSlot(models.Model):
     subnet = models.ForeignKey(Subnet, on_delete=models.SET_NULL, null=True, blank=True, related_name="slots")
     blockchain = models.CharField(max_length=50, choices=[("mainnet", "Mainnet"), ("testnet", "Testnet")])
     netuid = models.IntegerField()
-    is_registered = models.BooleanField(
-        default=False, help_text="Indicates if the slot is registered (in blocks of unset weights)"
-    )
     maximum_registration_price = models.IntegerField(default=0, help_text="Maximum registration price in RAO")
     registration_block = models.ForeignKey(
         "Block", on_delete=models.SET_NULL, null=True, blank=True, related_name="registration_slots"
@@ -72,12 +69,8 @@ class SubnetSlot(models.Model):
 
     def __str__(self):
         subnet_name = self.subnet.name if self.subnet else "No subnet"
-        suffix = " (unregistered)" if not self.is_registered else ""
+        suffix = " (unregistered)" if self.registration_block and not self.registration_block else ""
         return f"{self.blockchain} / sn{self.netuid}: {subnet_name} {suffix}"
-
-    def save(self, *args, **kwargs):
-        self.is_registered = self.registration_block is not None and self.deregistration_block is None
-        super().save(*args, **kwargs)
 
 
 class Hotkey(models.Model):

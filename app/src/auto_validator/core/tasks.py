@@ -38,7 +38,7 @@ def update_validator_status_for_slot(slot_id):
         subtensor = bt.subtensor(network=settings.BT_NETWORK_NAME)
         validators = ValidatorInstance.objects.filter(subnet_slot=slot)
         if validators.exists():
-            metagraph = bt.metagraph(netuid=netuid, network="local", lite=True, sync=True)
+            metagraph = subtensor.metagraph(netuid=netuid, lite=True)
             current_block = subtensor.get_current_block()
             for validator in validators:
                 last_updated = fetch_last_updated_from_metagraph(metagraph, validator.hotkey.hotkey)
