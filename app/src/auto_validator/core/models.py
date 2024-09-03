@@ -37,7 +37,7 @@ class Block(models.Model):
 
 class Subnet(models.Model):
     name = models.CharField(max_length=255)
-    description = models.TextField(null=True, blank=True) 
+    description = models.TextField(null=True, blank=True)
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)
 
     def registered_networks(self):
