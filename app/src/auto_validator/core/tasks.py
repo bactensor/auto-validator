@@ -1,8 +1,8 @@
 import bittensor as bt
 import structlog
+from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.conf import settings
-from django.core.cache import cache
 
 from auto_validator.celery import app
 
@@ -18,44 +18,39 @@ def demo_task(x, y):
 
 
 @app.task
-def update_validator_status():
-    # Step 1: Get all subnet slots ordered by ID
-    subnet_slots = SubnetSlot.objects.filter().order_by("id")
-    total_slots = subnet_slots.count()
+def schedule_update_validator_status():
+    subnet_slots = SubnetSlot.objects.order_by("id")
+    for slot in subnet_slots:
+        update_validator_status_for_slot.delay(slot.id)
 
-    if total_slots == 0:
-        logger.warning("No subnet slots found.")
+
+@shared_task
+def update_validator_status_for_slot(slot_id):
+    try:
+        slot = SubnetSlot.objects.get(id=slot_id)
+    except SubnetSlot.DoesNotExist:
+        logger.warning(f"Subnet slot with ID {slot_id} does not exist.")
         return
 
-    # Step 2: Get the current slot index from the cache (default to 0)
-    current_index = cache.get("current_subnet_slot_index", 0)
-
-    # Step 3: Get the next subnet slot to process
-    slot = subnet_slots[current_index]
     blockchain = slot.blockchain
     netuid = slot.netuid
-    # Step 4: Process the selected slot
     try:
         subtensor = bt.subtensor(network=settings.BT_NETWORK_NAME)
         validators = ValidatorInstance.objects.filter(subnet_slot=slot)
         if validators.exists():
             metagraph = bt.metagraph(netuid=netuid, network="local", lite=True, sync=True)
-            # current_block = subtensor.get_current_block()
+            current_block = subtensor.get_current_block()
             for validator in validators:
                 last_updated = fetch_last_updated_from_metagraph(metagraph, validator.hotkey.hotkey)
-                validator.last_updated = last_updated
+                validator.last_updated = current_block - last_updated
                 validator.save()
                 logger.info(f"Validator:{validator.hotkey}, netuid:{netuid} was successfully updated!")
         else:
             logger.warning(f"No validators found for subnet slot with ID {slot.id}.")
-    except Exception as e:
-        logger.error(f"Failed to update validators for netuid {netuid} on {blockchain}: {e}")
+    except Exception:
+        logger.exception("Failed to update validators for netuid %s on %s", netuid, blockchain)
     finally:
         subtensor.close()
-
-    # Step 5: Update the index to point to the next slot
-    next_index = (current_index + 1) % total_slots
-    cache.set("current_subnet_slot_index", next_index)
 
 
 def fetch_last_updated_from_metagraph(metagraph, public_key):

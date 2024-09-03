@@ -1,5 +1,11 @@
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
-from django.db import models  # noqa
+from django.db import models
+
+
+def validate_hotkey_length(value):
+    if len(value) != 48:
+        raise ValidationError("Hotkey must be exactly 48 characters long.")
 
 
 class UploadedFile(models.Model):
@@ -26,61 +32,62 @@ class Block(models.Model):
     timestamp = models.DateTimeField()  # Time when the block was created
 
     def __str__(self):
-        return f"Block {self.serial_number} at {self.timestamp}"
+        return f"{self.serial_number}"
 
 
 class Subnet(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)  # Additional field for description
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)  # Link to operators
-    running_mainnet = models.BooleanField(default=False)
-    running_testnet = models.BooleanField(default=False)
 
-    def short_registration_indicator(self):
-        mainnet_slots = self.slots.filter(blockchain="mainnet")
-        testnet_slots = self.slots.filter(blockchain="testnet")
+    def registered_networks(self):
+        mainnet_slots = self.slots.filter(blockchain="mainnet", is_registered=True)
+        testnet_slots = self.slots.filter(blockchain="testnet", is_registered=True)
 
         mainnet_indicator = f"sn{mainnet_slots.first().netuid}" if mainnet_slots.exists() else ""
         testnet_indicator = f"t{testnet_slots.first().netuid}" if testnet_slots.exists() else ""
 
-        if mainnet_indicator and testnet_indicator:
-            return f"{mainnet_indicator}{testnet_indicator}"
-        elif mainnet_indicator:
-            return mainnet_indicator
-        elif testnet_indicator:
-            return testnet_indicator
-        else:
-            return "-"
+        return f"{mainnet_indicator} {testnet_indicator}" or "-"
 
     def __str__(self):
         return self.name
 
 
 class SubnetSlot(models.Model):
-    subnet = models.ForeignKey(Subnet, on_delete=models.CASCADE, related_name="slots")
+    subnet = models.ForeignKey(Subnet, on_delete=models.SET_NULL, null=True, blank=True, related_name="slots")
     blockchain = models.CharField(max_length=50, choices=[("mainnet", "Mainnet"), ("testnet", "Testnet")])
-    netuid = models.IntegerField()  # Changed from id_on_chain to netuid
-    registered = models.BooleanField(default=False)  # Registration status
-    maximum_registration_price = models.IntegerField(default=0)  # Maximum registration price
+    netuid = models.IntegerField()
+    is_registered = models.BooleanField(
+        default=False, help_text="Indicates if the slot is registered (in blocks of unset weights)"
+    )
+    maximum_registration_price = models.IntegerField(default=0, help_text="Maximum registration price in RAO")
     registration_block = models.ForeignKey(
         "Block", on_delete=models.SET_NULL, null=True, blank=True, related_name="registration_slots"
     )
     deregistration_block = models.ForeignKey(
         "Block", on_delete=models.SET_NULL, null=True, blank=True, related_name="deregistration_slots"
     )
-    restart_threshold = models.IntegerField(default=0)  # Threshold for restart
-    reinstall_threshold = models.IntegerField(default=0)  # Threshold for reinstall
-
-    def registered_status(self):
-        return True if self.registered else False
+    restart_threshold = models.IntegerField(default=0)
+    reinstall_threshold = models.IntegerField(default=0)
 
     def __str__(self):
-        return f"{self.blockchain} / sn{self.netuid}: {self.subnet.name}"
+        subnet_name = self.subnet.name if self.subnet else "No subnet"
+        suffix = " (unregistered)" if not self.is_registered else ""
+        return f"{self.blockchain} / sn{self.netuid}: {subnet_name} {suffix}"
+
+    def save(self, *args, **kwargs):
+        self.is_registered = self.registration_block is not None and self.deregistration_block is None
+        super().save(*args, **kwargs)
 
 
 class Hotkey(models.Model):
-    hotkey = models.CharField(max_length=255)
+    hotkey = models.CharField(max_length=48, validators=[validate_hotkey_length], unique=True)
     is_mother = models.BooleanField(default=False)
+
+    def delete(self, *args, **kwargs):
+        if self.validatorinstance_set.exists():
+            raise ValidationError("Cannot delete Hotkey because related ValidatorInstance objects exist.")
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return self.hotkey
@@ -89,35 +96,31 @@ class Hotkey(models.Model):
 class ValidatorInstance(models.Model):
     subnet_slot = models.ForeignKey(SubnetSlot, on_delete=models.CASCADE, related_name="validator_instances")
     hotkey = models.ForeignKey("Hotkey", on_delete=models.SET_NULL, null=True, blank=True)
-    last_updated = models.IntegerField(null=True, blank=True)
+    last_updated = models.PositiveIntegerField(null=True, blank=True)
     status = models.BooleanField(default=False)
-    # hotkey = models.ForeignKey('self', on_delete=models.CASCADE, related_name='child_instance', null=True, blank=True)
     uses_child_hotkey = models.BooleanField(default=False)
-    server = models.OneToOneField(
-        "Server", on_delete=models.CASCADE, related_name="validator_instances"
-    )  # Link to Server
+    server = models.OneToOneField("Server", on_delete=models.CASCADE, related_name="validator_instances")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.hotkey.__str__()
+        return str(self.hotkey)
 
 
 class Operator(models.Model):
     name = models.CharField(max_length=255)
     discord_id = models.CharField(max_length=255, unique=True)
-    email = models.EmailField(null=True, blank=True)
 
     def __str__(self):
         return self.name
 
 
 class Server(models.Model):
-    name = models.CharField(max_length=255)
-    ip_address = models.GenericIPAddressField()  # Field for IP address
+    name = models.CharField(max_length=255, null=True, blank=True)
+    ip_address = models.GenericIPAddressField()
     ssh_private_key = models.CharField(
-        max_length=255, null=True
-    )  # Field for SSH key path (relative to ~/.auto-validator/ssh/)
-    description = models.TextField(null=True, blank=True)  # Additional field for description
+        max_length=255, null=True, blank=True, help_text="Path to the SSH private key file"
+    )
+    description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

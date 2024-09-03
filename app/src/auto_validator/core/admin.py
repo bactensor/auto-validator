@@ -4,7 +4,6 @@ from rest_framework.authtoken.admin import TokenAdmin
 
 from auto_validator.core.models import (
     UploadedFile,
-    Block,
     Hotkey,
     Operator,
     Server,
@@ -32,28 +31,9 @@ class SubnetAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "description",
-        "short_registration_indicator",
-        "running_mainnet",
-        "running_testnet",
+        "registered_networks",
     )
-    search_fields = ("name",)
-
-    def running_mainnet(self, obj):
-        return obj.slots.filter(blockchain="mainnet").exists()
-
-    running_mainnet.boolean = True
-    running_mainnet.short_description = "Mainnet"
-
-    def running_testnet(self, obj):
-        return obj.slots.filter(blockchain="testnet").exists()
-
-    running_testnet.boolean = True
-    running_testnet.short_description = "Testnet"
-
-    def short_registration_indicator(self, obj):
-        return obj.short_registration_indicator()
-
-    short_registration_indicator.short_description = "Registration Indicator"
+    search_fields = ("name", "slots__netuid")
 
 
 @admin.register(SubnetSlot)
@@ -62,18 +42,14 @@ class SubnetSlotAdmin(admin.ModelAdmin):
         "subnet",
         "blockchain",
         "netuid",
-        "registered",
-        "maximum_registration_price",
-        "restart_threshold",
-        "reinstall_threshold",
+        "is_registered",
+        "max_registration_price_RAO",
         "registration_block",
         "deregistration_block",
     )
     search_fields = ("subnet__name", "netuid")
     list_filter = ("blockchain",)
-
-    def registered(self, obj):
-        return obj.registered_status()
+    list_per_page = 2
 
     def registration_block(self, obj):
         return obj.registration_block.serial_number if obj.registration_block else "N/A"
@@ -85,6 +61,9 @@ class SubnetSlotAdmin(admin.ModelAdmin):
 
     deregistration_block.short_description = "Deregistration Block"
 
+    def max_registration_price_RAO(self, obj):
+        return f"{obj.maximum_registration_price} RAO"
+
 
 @admin.register(ValidatorInstance)
 class ValidatorInstanceAdmin(admin.ModelAdmin):
@@ -94,23 +73,20 @@ class ValidatorInstanceAdmin(admin.ModelAdmin):
 
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
-    list_display = ("name", "ip_address", "validatorinstance", "description", "created_at")
+    list_display = ("name", "ip_address", "subnet_slot", "validatorinstance_status", "description", "created_at")
     search_fields = ("name", "ip_address", "validator_instance__subnet_slot__subnet__name")
 
-    def validatorinstance(self, obj):
-        return obj.validator_instances.hotkey if obj.validator_instances else "N/A"
+    def subnet_slot(self, obj):
+        return obj.validator_instances.subnet_slot if obj.validator_instances else "N/A"
+
+    def validatorinstance_status(self, obj):
+        return obj.validator_instances.status if obj.validator_instances else "N/A"
 
 
 @admin.register(Operator)
 class OperatorAdmin(admin.ModelAdmin):
-    list_display = ("name", "discord_id", "email")
-    search_fields = ("name", "discord_id", "email")
-
-
-@admin.register(Block)
-class BlockAdmin(admin.ModelAdmin):
-    list_display = ("serial_number", "timestamp")
-    search_fields = ("serial_number",)
+    list_display = ("name", "discord_id")
+    search_fields = ("name", "discord_id")
 
 
 @admin.register(Hotkey)
