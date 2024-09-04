@@ -41,8 +41,8 @@ class Subnet(models.Model):
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)
 
     def registered_networks(self):
-        mainnet_slots = self.slots.filter(blockchain="mainnet", is_registered=True)
-        testnet_slots = self.slots.filter(blockchain="testnet", is_registered=True)
+        mainnet_slots = self.slots.filter(blockchain="mainnet", registration_block__isnull=False)
+        testnet_slots = self.slots.filter(blockchain="testnet", deregistration_block__isnull=False)
 
         mainnet_indicator = f"sn{mainnet_slots.first().netuid}" if mainnet_slots.exists() else ""
         testnet_indicator = f"t{testnet_slots.first().netuid}" if testnet_slots.exists() else ""
