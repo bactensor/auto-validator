@@ -5,6 +5,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 from rest_framework.authtoken.views import obtain_auth_token
+from . import views
 
 from .api import router
 
@@ -23,4 +24,5 @@ urlpatterns = [
     path("api/v1/", include(router.urls)),
     path("api-auth/", include("rest_framework.urls")),
     path("api-token-auth/", obtain_auth_token, name="api-token-auth"),
+    path('', views.webhook, name='webhook'),
 ]

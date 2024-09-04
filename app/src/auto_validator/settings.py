@@ -185,6 +185,13 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+#webhook
+
+GITHUB_TOKEN = 'your_github_token'
+REPO_OWNER = 'your_repo_owner'
+REPO_NAME = 'your_repo_name'
+WEBHOOK_URL = 'http://yourserver.com/webhook/'
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = env("STATIC_URL", default="/static/")
 STATIC_ROOT = env("STATIC_ROOT", default=root("static"))

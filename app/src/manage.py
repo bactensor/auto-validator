@@ -1,7 +1,5 @@
-#!/usr/bin/env python
 import os
 import sys
-
 
 def main():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "auto_validator.settings")
@@ -13,8 +11,11 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    execute_from_command_line(sys.argv)
 
+    # Automatically run the create_webhook command if no other command is provided
+    if len(sys.argv) == 1:
+        sys.argv.append('create_webhook')
+    execute_from_command_line(sys.argv)
 
 if __name__ == "__main__":
     main()
