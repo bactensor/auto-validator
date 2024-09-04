@@ -4,6 +4,7 @@ Django settings for auto_validator project.
 
 import inspect
 import logging
+import os
 from datetime import timedelta
 from functools import wraps
 
@@ -188,11 +189,12 @@ USE_TZ = True
 
 #webhook
 
-GITHUB_SECRET = 'your_github_webhook_secret'
-GITHUB_TOKEN = 'your_github_token'
+
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+GITHUB_SECRET = os.getenv('GITHUB_SECRET')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 REPO_OWNER = 'your_repo_owner'
 REPO_NAME = 'your_repo_name'
-WEBHOOK_URL = 'your_public_webhook_url'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = env("STATIC_URL", default="/static/")
@@ -370,7 +372,6 @@ SPECTACULAR_SETTINGS = {
 
 _STORAGE_BACKEND = env("STORAGE_BACKEND")
 
-
 if _STORAGE_BACKEND == "storages.backends.s3.S3Storage":
     # Instructions for setting up S3 storage using Backblaze B2:
     # 1. create bucket
@@ -393,7 +394,7 @@ if _STORAGE_BACKEND == "storages.backends.s3.S3Storage":
 elif _STORAGE_BACKEND == "django.core.files.storage.FileSystemStorage":
     _STORAGE_BACKEND_OPTIONS = {}
 else:
-    raise RuntimeError(f"unsupported STORAGE_BACKEND: {STORAGE_BACKEND}")
+    raise RuntimeError(f"unsupported STORAGE_BACKEND: {_STORAGE_BACKEND}")
 
 STORAGES = {
     "default": {

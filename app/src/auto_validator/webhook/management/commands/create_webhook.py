@@ -1,7 +1,8 @@
 # webhook/management/commands/register_webhook.py
 import requests
-from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management.base import BaseCommand
+
 
 class Command(BaseCommand):
     help = 'Register GitHub webhook'
@@ -22,8 +23,11 @@ class Command(BaseCommand):
             'Authorization': f'token {settings.GITHUB_TOKEN}',
             'Accept': 'application/vnd.github.v3+json'
         }
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 201:
-            self.stdout.write(self.style.SUCCESS('Successfully registered webhook'))
-        else:
-            self.stdout.write(self.style.ERROR(f'Failed to register webhook: {response.content}'))
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            if response.status_code == 201:
+                self.stdout.write(self.style.SUCCESS('Successfully registered webhook'))
+            else:
+                self.stdout.write(self.style.ERROR(f'Failed to register webhook: {response.content}'))
+        except requests.exceptions.RequestException as e:
+            self.stdout.write(self.style.ERROR(f'Error registering webhook: {e}'))

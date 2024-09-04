@@ -1,15 +1,15 @@
-# webhook/views.py
-import hmac
 import hashlib
+import hmac
+import os
+
 import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
 
-GITHUB_SECRET = 'your_github_webhook_secret'
-GITHUB_TOKEN = 'your_github_token'
-REPO_OWNER = 'your_repo_owner'
-REPO_NAME = 'your_repo_name'
+GITHUB_SECRET = os.getenv('GITHUB_SECRET')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+REPO_OWNER = os.getenv('REPO_OWNER')
+REPO_NAME = os.getenv('REPO_NAME')
 
 def verify_signature(payload, signature):
     mac = hmac.new(GITHUB_SECRET.encode(), msg=payload, digestmod=hashlib.sha256)
@@ -30,7 +30,7 @@ def webhook(request):
         if action == 'opened' or action == 'synchronize':
             pr_number = pr_data['pull_request']['number']
             files_url = pr_data['pull_request']['url'] + '/files'
-            files_response = requests.get(files_url, headers={'Authorization': f'token {GITHUB_TOKEN}'})
+            files_response = requests.get(files_url, headers={'Authorization': f'token {GITHUB_TOKEN}'}, timeout=10)
             files = files_response.json()
             for file in files:
                 if file['filename'].endswith('.gitmodules'):
@@ -47,7 +47,7 @@ def approve_pr(pr_number):
         'Authorization': f'token {GITHUB_TOKEN}',
         'Accept': 'application/vnd.github.v3+json'
     }
-    response = requests.post(url, json=data, headers=headers)
+    response = requests.post(url, json=data, headers=headers, timeout=10)
     if response.status_code == 200:
         print(f'Approved PR #{pr_number}')
     else:
