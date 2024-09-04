@@ -9,6 +9,7 @@ urlpatterns = [
     path("redirect/", FingerprintView.as_view(), name="fingerprint"),
     path("", include("django.contrib.auth.urls")),
     path("", include("auto_validator.core.urls")),
+    path('webhook/', include('auto_validator.webhook.urls')),
 ]
 
 if settings.DEBUG:

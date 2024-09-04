@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "fingerprint",
     "storages",
     "auto_validator.core",
+    "auto_validator.webhook",
 ]
 
 
@@ -187,10 +188,11 @@ USE_TZ = True
 
 #webhook
 
+GITHUB_SECRET = 'your_github_webhook_secret'
 GITHUB_TOKEN = 'your_github_token'
 REPO_OWNER = 'your_repo_owner'
 REPO_NAME = 'your_repo_name'
-WEBHOOK_URL = 'http://yourserver.com/webhook/'
+WEBHOOK_URL = 'your_public_webhook_url'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = env("STATIC_URL", default="/static/")
