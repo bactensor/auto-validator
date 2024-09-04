@@ -13,8 +13,7 @@ def main():
         ) from exc
 
     # Automatically run the create_webhook command if no other command is provided
-    if len(sys.argv) == 1:
-        sys.argv.append('create_webhook')
+
     execute_from_command_line(sys.argv)
 
 if __name__ == "__main__":
