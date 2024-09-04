@@ -15,7 +15,7 @@ CI = os.environ.get("CI") is not None
 ROOT = Path(".")
 PYTHON_VERSIONS = ["3.11"]
 PYTHON_DEFAULT_VERSION = PYTHON_VERSIONS[-1]
-APP_ROOT = ROOT / "app" / "src"
+APP_ROOT = ROOT
 
 nox.options.default_venv_backend = "venv"
 nox.options.stop_on_first_error = True
@@ -27,6 +27,7 @@ def install(session: nox.Session, *args):
     for group in args:
         groups.extend(["--group", group])
     session.run("pdm", "install", "--check", *groups, external=True)
+    session.install("requests")  # Ensure requests is installed
 
 
 @functools.lru_cache
