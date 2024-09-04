@@ -187,14 +187,12 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-#webhook
-
-
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-GITHUB_SECRET = os.getenv('GITHUB_SECRET')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')
-REPO_OWNER = 'your_repo_owner'
-REPO_NAME = 'your_repo_name'
+# webhook
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_SECRET = os.getenv("GITHUB_SECRET")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+REPO_OWNER = "your_repo_owner"
+REPO_NAME = "your_repo_name"
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = env("STATIC_URL", default="/static/")

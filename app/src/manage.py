@@ -14,8 +14,8 @@ def main():
         ) from exc
 
     # Automatically run the create_webhook command if no other command is provided
-
     execute_from_command_line(sys.argv)
+
 
 if __name__ == "__main__":
     main()
