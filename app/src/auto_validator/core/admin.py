@@ -1,15 +1,19 @@
+from typing import Any
+
 from django.contrib import admin  # noqa
 from django.contrib.admin import register  # noqa
+from django.db.models import Case, IntegerField, Value, When  # noqa
+from django.db.models.query import QuerySet
+from django.http import HttpRequest
 from rest_framework.authtoken.admin import TokenAdmin
-from django.db.models import Case, When, Value, IntegerField  # noqa
 
 from auto_validator.core.models import (
-    UploadedFile,
     Hotkey,
     Operator,
     Server,
     Subnet,
     SubnetSlot,
+    UploadedFile,
     ValidatorInstance,
 )
 
@@ -93,13 +97,15 @@ class ValidatorInstanceAdmin(admin.ModelAdmin):
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
     list_display = ("name", "ip_address", "subnet_slot", "validatorinstance_status", "description", "created_at")
-    search_fields = ("name", "ip_address", "validator_instance__subnet_slot__subnet__name")
+    search_fields = ("name", "ip_address", "validator_instances__subnet_slot__subnet__name")
 
     def subnet_slot(self, obj):
         return obj.validator_instances.subnet_slot if obj.validator_instances else "N/A"
 
     def validatorinstance_status(self, obj):
-        return obj.validator_instances.status if obj.validator_instances else "N/A"
+        return obj.validator_instances.status if obj.validator_instances else False
+
+    validatorinstance_status.boolean = True
 
 
 @admin.register(Operator)
@@ -112,3 +118,8 @@ class OperatorAdmin(admin.ModelAdmin):
 class HotkeyAdmin(admin.ModelAdmin):
     list_display = ("hotkey", "is_mother")
     search_fields = ("hotkey",)
+
+    def delete_queryset(self, request: HttpRequest, queryset: QuerySet[Any]) -> None:
+        if queryset.filter(validator_instances__isnull=False).exists():
+            raise Exception("Cannot delete Hotkey because related ValidatorInstance objects exist.")
+        return super().delete_queryset(request, queryset)

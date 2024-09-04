@@ -77,18 +77,15 @@ class Hotkey(models.Model):
     hotkey = models.CharField(max_length=48, validators=[validate_hotkey_length], unique=True)
     is_mother = models.BooleanField(default=False)
 
-    def delete(self, *args, **kwargs):
-        if self.validatorinstance_set.exists():
-            raise ValidationError("Cannot delete Hotkey because related ValidatorInstance objects exist.")
-        super().delete(*args, **kwargs)
-
     def __str__(self):
         return self.hotkey
 
 
 class ValidatorInstance(models.Model):
     subnet_slot = models.ForeignKey(SubnetSlot, on_delete=models.CASCADE, related_name="validator_instances")
-    hotkey = models.ForeignKey("Hotkey", on_delete=models.SET_NULL, null=True, blank=True)
+    hotkey = models.ForeignKey(
+        "Hotkey", on_delete=models.SET_NULL, null=True, blank=True, related_name="validator_instances"
+    )
     last_updated = models.PositiveIntegerField(null=True, blank=True)
     status = models.BooleanField(default=False)
     uses_child_hotkey = models.BooleanField(default=False)
