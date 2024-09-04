@@ -1,6 +1,7 @@
 import os
 import sys
 
+
 def main():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "auto_validator.settings")
     try:
@@ -13,8 +14,7 @@ def main():
         ) from exc
 
     # Automatically run the create_webhook command if no other command is provided
-    if len(sys.argv) == 1:
-        sys.argv.append('create_webhook')
+
     execute_from_command_line(sys.argv)
 
 if __name__ == "__main__":
