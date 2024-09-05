@@ -401,3 +401,9 @@ STORAGES = {
 }
 
 BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
+
+SUBNETS_GITHUB_URL = env(
+    "SUBNETS_GITHUB_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
+)
+
+LINODE_API_KEY = ""

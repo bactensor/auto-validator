@@ -32,23 +32,21 @@ def update_validator_status_for_slot(slot_id):
         logger.warning(f"Subnet slot with ID {slot_id} does not exist.")
         return
 
-    blockchain = slot.blockchain
-    netuid = slot.netuid
     try:
         subtensor = bt.subtensor(network=settings.BT_NETWORK_NAME)
         validators = ValidatorInstance.objects.filter(subnet_slot=slot)
         if validators.exists():
-            metagraph = subtensor.metagraph(netuid=netuid, lite=True)
+            metagraph = subtensor.metagraph(netuid=slot.netuid, lite=True)
             current_block = subtensor.get_current_block()
             for validator in validators:
                 last_updated = fetch_last_updated_from_metagraph(metagraph, validator.hotkey.hotkey)
                 validator.last_updated = current_block - last_updated
                 validator.save()
-                logger.info(f"Validator:{validator.hotkey}, netuid:{netuid} was successfully updated!")
+                logger.info(f"Validator:{validator.hotkey}, subnet slot:{slot} was successfully updated!")
         else:
             logger.warning(f"No validators found for subnet slot with ID {slot.id}.")
     except Exception:
-        logger.exception("Failed to update validators for netuid %s on %s", netuid, blockchain)
+        logger.exception("Failed to update validators for subnet slot on %s", slot)
     finally:
         subtensor.close()
 

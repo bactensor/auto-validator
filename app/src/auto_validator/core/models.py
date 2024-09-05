@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.db import models
+from django.db.models import F, Q
 
 
 def validate_hotkey_length(value):
@@ -41,28 +42,48 @@ class Subnet(models.Model):
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)
 
     def registered_networks(self):
-        mainnet_slots = self.slots.filter(blockchain="mainnet", registration_block__isnull=False)
-        testnet_slots = self.slots.filter(blockchain="testnet", deregistration_block__isnull=False)
+        mainnet_slots = self.slots.filter(
+            Q(
+                Q(registration_block__isnull=False, deregistration_block__isnull=True)
+                | Q(
+                    registration_block__isnull=False,
+                    deregistration_block__isnull=False,
+                    registration_block__gt=F("deregistration_block"),
+                )
+            ),
+            blockchain="mainnet",
+        )
+        testnet_slots = self.slots.filter(
+            Q(
+                Q(registration_block__isnull=False, deregistration_block__isnull=True)
+                | Q(
+                    registration_block__isnull=False,
+                    deregistration_block__isnull=False,
+                    registration_block__gt=F("deregistration_block"),
+                )
+            ),
+            blockchain="testnet",
+        )
 
         mainnet_indicator = f"sn{mainnet_slots.first().netuid}" if mainnet_slots.exists() else ""
         testnet_indicator = f"t{testnet_slots.first().netuid}" if testnet_slots.exists() else ""
 
-        return f"{mainnet_indicator} {testnet_indicator}" or "-"
+        return f"{mainnet_indicator}{testnet_indicator}" or "-"
 
     def __str__(self):
         return self.name
 
 
 class SubnetSlot(models.Model):
-    subnet = models.ForeignKey(Subnet, on_delete=models.SET_NULL, null=True, blank=True, related_name="slots")
+    subnet = models.ForeignKey(Subnet, on_delete=models.PROTECT, null=True, blank=True, related_name="slots")
     blockchain = models.CharField(max_length=50, choices=[("mainnet", "Mainnet"), ("testnet", "Testnet")])
     netuid = models.IntegerField()
     maximum_registration_price = models.IntegerField(default=0, help_text="Maximum registration price in RAO")
     registration_block = models.ForeignKey(
-        "Block", on_delete=models.SET_NULL, null=True, blank=True, related_name="registration_slots"
+        "Block", on_delete=models.PROTECT, null=True, blank=True, related_name="registration_slots"
     )
     deregistration_block = models.ForeignKey(
-        "Block", on_delete=models.SET_NULL, null=True, blank=True, related_name="deregistration_slots"
+        "Block", on_delete=models.PROTECT, null=True, blank=True, related_name="deregistration_slots"
     )
     restart_threshold = models.IntegerField(default=0)
     reinstall_threshold = models.IntegerField(default=0)
@@ -82,14 +103,14 @@ class Hotkey(models.Model):
 
 
 class ValidatorInstance(models.Model):
-    subnet_slot = models.ForeignKey(SubnetSlot, on_delete=models.CASCADE, related_name="validator_instances")
+    subnet_slot = models.ForeignKey(SubnetSlot, on_delete=models.PROTECT, related_name="validator_instances")
     hotkey = models.ForeignKey(
-        "Hotkey", on_delete=models.SET_NULL, null=True, blank=True, related_name="validator_instances"
+        "Hotkey", on_delete=models.PROTECT, null=True, blank=True, related_name="validator_instances"
     )
     last_updated = models.PositiveIntegerField(null=True, blank=True)
     status = models.BooleanField(default=False)
     uses_child_hotkey = models.BooleanField(default=False)
-    server = models.OneToOneField("Server", on_delete=models.CASCADE, related_name="validator_instances")
+    server = models.OneToOneField("Server", on_delete=models.PROTECT, related_name="validator_instances")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1,10 +1,5 @@
-from typing import Any
-
-from django.contrib import admin  # noqa
-from django.contrib.admin import register  # noqa
-from django.db.models import Case, IntegerField, Value, When  # noqa
-from django.db.models.query import QuerySet
-from django.http import HttpRequest
+from django.contrib import admin
+from django.db.models import Case, IntegerField, Value, When
 from rest_framework.authtoken.admin import TokenAdmin
 
 from auto_validator.core.models import (
@@ -54,7 +49,7 @@ class SubnetSlotAdmin(admin.ModelAdmin):
     )
     search_fields = ("subnet__name", "netuid")
     list_filter = ("blockchain",)
-    list_per_page = 2
+    list_select_related = ("subnet", "registration_block", "deregistration_block")
 
     def registration_block(self, obj):
         return obj.registration_block.serial_number if obj.registration_block else "N/A"
@@ -103,9 +98,11 @@ class ServerAdmin(admin.ModelAdmin):
         return obj.validator_instances.subnet_slot if obj.validator_instances else "N/A"
 
     def validatorinstance_status(self, obj):
-        return obj.validator_instances.status if obj.validator_instances else False
+        return getattr(obj.validator_instances, "status", False)
 
     validatorinstance_status.boolean = True
+
+    list_select_related = ("validator_instances", "validator_instances__subnet_slot")
 
 
 @admin.register(Operator)
@@ -118,8 +115,3 @@ class OperatorAdmin(admin.ModelAdmin):
 class HotkeyAdmin(admin.ModelAdmin):
     list_display = ("hotkey", "is_mother")
     search_fields = ("hotkey",)
-
-    def delete_queryset(self, request: HttpRequest, queryset: QuerySet[Any]) -> None:
-        if queryset.filter(validator_instances__isnull=False).exists():
-            raise Exception("Cannot delete Hotkey because related ValidatorInstance objects exist.")
-        return super().delete_queryset(request, queryset)
