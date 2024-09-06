@@ -76,7 +76,7 @@ class SubnetSlotAdmin(admin.ModelAdmin):
                 output_field=IntegerField(),
             )
         )
-        return qs
+        return qs.order_by("blockchain", "netuid")
 
     is_registered.boolean = True
     is_registered.admin_order_field = "is_registered_sort"
