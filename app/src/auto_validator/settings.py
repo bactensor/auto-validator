@@ -218,9 +218,13 @@ CELERY_BEAT_SCHEDULE = {  # type: ignore
     #     'task': "auto_validator.core.tasks.demo_task",
     #     'args': [2, 2],
     #     'kwargs': {},
-    #     'schedule': crontab(minute=0, hour=0),
-    #     'options': {"time_limit": 300},
+    #     'schedule': timedelta(seconds=30),
+    #     'options': {"time_limit": 10000},
     # },
+    "update-validator-status": {
+        "task": "auto_validator.core.tasks.schedule_update_validator_status",
+        "schedule": timedelta(seconds=60),
+    },
 }
 CELERY_TASK_ROUTES = ["auto_validator.celery.route_task"]
 CELERY_TASK_TIME_LIMIT = int(timedelta(minutes=5).total_seconds())
@@ -384,7 +388,7 @@ if _STORAGE_BACKEND == "storages.backends.s3.S3Storage":
 elif _STORAGE_BACKEND == "django.core.files.storage.FileSystemStorage":
     _STORAGE_BACKEND_OPTIONS = {}
 else:
-    raise RuntimeError(f"unsupported STORAGE_BACKEND: {STORAGE_BACKEND}")
+    raise RuntimeError(f"unsupported STORAGE_BACKEND: {_STORAGE_BACKEND}")
 
 STORAGES = {
     "default": {
@@ -395,3 +399,11 @@ STORAGES = {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
+
+BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
+
+SUBNETS_GITHUB_URL = env(
+    "SUBNETS_GITHUB_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
+)
+
+LINODE_API_KEY = ""
