@@ -41,22 +41,26 @@ def test_file_upload_with_valid_signature(api_client, user, eq):
     assert uploaded_file.file_size == 12
 
 
+@mock.patch("auto_validator.core.utils.decorators.verify_signature_and_route_subnet")
 @pytest.mark.django_db
-def test_file_upload_with_invalid_signature(api_client, user):
+def test_file_upload_with_invalid_signature(
+    mock_verify_signature_and_route_subnet,
+    api_client,
+    user,
+):
     file_content = io.BytesIO(b"file content")
     file_content.name = "testfile.txt"
 
     file_data = {
         "file": file_content,
     }
+    mock_verify_signature_and_route_subnet.side_effect = PermissionDenied("Invalid signature")
+    response = api_client.post(V1_FILES_URL, file_data, format="multipart")
 
-    with mock.patch(
-        "auto_validator.core.utils.decorators.verify_signature_and_route_subnet",
-        side_effect=PermissionDenied("Invalid signature"),
-    ):
-        response = api_client.post(V1_FILES_URL, file_data, format="multipart")
-
+    # Check that the response status code is 403 Forbidden
     assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data["detail"] == "Invalid signature"
+
     assert UploadedFile.objects.count() == 0
 
 
