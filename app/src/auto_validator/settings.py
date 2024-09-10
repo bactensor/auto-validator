@@ -14,6 +14,7 @@ import structlog
 root = environ.Path(__file__) - 2
 
 env = environ.Env(DEBUG=(bool, False))
+environ.Env.read_env()
 
 # .env file contents are not passed to docker image during build stage;
 # this results in errors if you require some env var to be set, as if in "env('MYVAR')" -
@@ -406,4 +407,7 @@ SUBNETS_GITHUB_URL = env(
     "SUBNETS_GITHUB_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
 )
 
-LINODE_API_KEY = ""
+LINODE_API_KEY = env("LINODE_API_KEY", default="")
+PAPERSPACE_API_KEY = env("PAPERSPACE_API_KEY", default="")
+
+SIGNATURE_EXPIRE_DURATION = env("SIGNATURE_EXPIRE_DURATION", default="300")
