@@ -54,9 +54,9 @@ def test_file_upload_with_invalid_signature(api_client, user):
         "auto_validator.core.utils.decorators.verify_signature_and_route_subnet",
         side_effect=PermissionDenied("Invalid signature"),
     ):
-        with pytest.raises(PermissionDenied):
-            api_client.post(V1_FILES_URL, file_data, format="multipart")
+        response = api_client.post(V1_FILES_URL, file_data, format="multipart")
 
+    assert response.status_code == status.HTTP_403_FORBIDDEN
     assert UploadedFile.objects.count() == 0
 
 
