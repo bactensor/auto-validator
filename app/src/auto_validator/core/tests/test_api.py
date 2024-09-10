@@ -1,15 +1,19 @@
 import io
 from datetime import datetime
+from unittest import mock
 
 import pytest
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 
 from auto_validator.core.models import UploadedFile
 
 V1_FILES_URL = "/api/v1/files/"
 
 
-def test_file_upload(api_client, user, eq):
+@mock.patch("auto_validator.core.utils.decorators.verify_signature_and_route_subnet", lambda x: x)
+@pytest.mark.django_db
+def test_file_upload_with_valid_signature(api_client, user, eq):
     file_content = io.BytesIO(b"file content")
     file_content.name = "testfile.txt"
 
@@ -35,6 +39,25 @@ def test_file_upload(api_client, user, eq):
     assert uploaded_file.description == ""
     assert uploaded_file.user.username == user.username
     assert uploaded_file.file_size == 12
+
+
+@pytest.mark.django_db
+def test_file_upload_with_invalid_signature(api_client, user):
+    file_content = io.BytesIO(b"file content")
+    file_content.name = "testfile.txt"
+
+    file_data = {
+        "file": file_content,
+    }
+
+    with mock.patch(
+        "auto_validator.core.utils.decorators.verify_signature_and_route_subnet",
+        side_effect=PermissionDenied("Invalid signature"),
+    ):
+        with pytest.raises(PermissionDenied):
+            api_client.post(V1_FILES_URL, file_data, format="multipart")
+
+    assert UploadedFile.objects.count() == 0
 
 
 @pytest.mark.django_db
