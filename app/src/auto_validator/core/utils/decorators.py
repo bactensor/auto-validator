@@ -23,7 +23,7 @@ def verify_signature_and_route_subnet(view_func):
             nonce_float = float(nonce)
 
             current_time = time.time()
-            if abs(current_time - nonce_float) > settings.SIGNATURE_VALID_DURATION:
+            if abs(current_time - nonce_float) > int(settings.SIGNATURE_EXPIRE_DURATION):
                 raise AuthenticationFailed("Invalid nonce")
 
             if not hotkey:
