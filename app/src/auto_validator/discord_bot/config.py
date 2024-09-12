@@ -5,7 +5,6 @@ that is supposed to be located in the project's root directory.
 """
 
 import os
-import logging
 from pathlib import Path
 from typing import Dict
 
@@ -24,8 +23,6 @@ def load_config() -> Dict[str, str]:
     config: Dict[str, str] = {
         "DISCORD_BOT_TOKEN": os.getenv("DISCORD_BOT_TOKEN"),
         "GUILD_ID": os.getenv("GUILD_ID"),
-        "DEBUG": os.getenv("DEBUG", "False"),
-        "LOG_LEVEL": os.getenv("LOG_LEVEL", 'INFO'),
         "SUBNET_CONFIG_URL": os.getenv("SUBNET_CONFIG_URL"),
         "BOT_NAME": os.getenv("BOT_NAME"),
         "CATEGORY_NAME": os.getenv("CATEGORY_NAME"),
@@ -33,35 +30,10 @@ def load_config() -> Dict[str, str]:
     }
 
     # Validate that all required environment variables are set
-    required_vars = ["DISCORD_BOT_TOKEN", "GUILD_ID", "DEBUG", "LOG_LEVEL", "SUBNET_CONFIG_URL", "BOT_NAME", "CATEGORY_NAME"]
+    required_vars = ["DISCORD_BOT_TOKEN", "GUILD_ID", "SUBNET_CONFIG_URL", "BOT_NAME", "CATEGORY_NAME"]
     for var in required_vars:
         if config[var] is None:
             raise ValueError(f"Environment variable {var} is not set")
 
     return config
-
-def setup_logger(config: Dict[str, str]) -> logging.Logger:
-    """
-    Set up logging based on the environment and configuration.
-    """
-
-    # Determine if the application is running in debug mode
-    debug_mode = config["DEBUG"] in ['true', '1', 't']
-
-    # Set the log level based on the debug mode
-    log_level = logging.DEBUG if debug_mode else config["LOG_LEVEL"].upper()
-
-    # Configure logging
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('app.log'),
-            logging.StreamHandler()
-        ]
-    )
-
-    logger = logging.getLogger(__name__)
-    logger.info("Logging is configured")
-    return logger
 

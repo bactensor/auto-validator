@@ -10,6 +10,8 @@ from functools import wraps
 import environ
 import structlog
 
+from .discord_bot.config import load_config
+
 # from celery.schedules import crontab
 root = environ.Path(__file__) - 2
 
@@ -260,6 +262,12 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "main",
         },
+        "bot": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": root("logs/bot.log"),
+            "formatter": "main",
+        },
     },
     "root": {
         "handlers": ["console"],
@@ -291,6 +299,11 @@ LOGGING = {
             # only logs unavailable libs during psycopg initialization
             "propagate": False,
         },
+        "bot": {
+            "handlers": ["console", "bot"],
+            "level": "INFO",
+            "propagate": False,
+        }
     },
 }
 
@@ -407,3 +420,12 @@ SUBNETS_GITHUB_URL = env(
 )
 
 LINODE_API_KEY = ""
+
+# Discord bot config
+config = load_config()
+DISCORD_BOT_TOKEN = config["DISCORD_BOT_TOKEN"]
+GUILD_ID = int(config["GUILD_ID"])
+BOT_NAME = config["BOT_NAME"]
+CATEGORY_NAME = config["CATEGORY_NAME"]
+SUBNET_CONFIG_URL = config["SUBNET_CONFIG_URL"]
+

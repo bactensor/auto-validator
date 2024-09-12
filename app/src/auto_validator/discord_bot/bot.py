@@ -19,14 +19,14 @@ import re
 
 from discord.ext import commands
 
-from .config import load_config, setup_logger
+from .config import load_config
 from .subnet_config import SubnetConfigManager, UserID, ChannelName
 
 class DiscordBot(commands.Bot):
     def __init__(self, config: Optional[Dict[str, Any]] = None, 
                  logger: Optional[logging.Logger] = None) -> None:
         self.config: Dict[str, Any] = config or load_config()
-        self.logger: logging.Logger = logger or setup_logger(self.config)
+        self.logger: logging.Logger = logger
         self.config_manager = SubnetConfigManager(self, self.logger, self.config)
         self.category_creation_lock = asyncio.Lock()
 
