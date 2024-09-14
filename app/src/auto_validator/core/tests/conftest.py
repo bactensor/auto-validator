@@ -3,6 +3,7 @@ from unittest import mock
 
 import bittensor as bt
 import pytest
+import subprocess
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
@@ -84,7 +85,12 @@ def eq():
 
 @pytest.fixture
 def wallet():
-    wallet = bt.wallet(name="test_wallet", hotkey="test_hotkey")
-    with mock.patch("builtins.input", return_value="1234567890"):
-        wallet.create_if_non_existent()
+    process = subprocess.Popen(
+        ['python3', '-c', f'import bittensor as bt; wallet = bt.wallet(name="test_wallet", hotkey="testhotkey"); wallet.create_if_non_existent()'],
+        stdin=subprocess.PIPE,
+        text=True
+    )
+    process.communicate(input="123123123")
+    wallet = bt.wallet(name="test_wallet", hotkey="testhotkey")
+    wallet.create_if_non_existent()
     return wallet
