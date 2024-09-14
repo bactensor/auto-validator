@@ -21,8 +21,8 @@ TokenAdmin.raw_id_fields = ["user"]
 
 @admin.register(UploadedFile)
 class UploadedFileAdmin(admin.ModelAdmin):
-    list_display = ("file_name", "file_size", "user", "created_at")
-    list_filter = ("user", "created_at", "file_size")
+    list_display = ("file_name", "file_size", "hotkey", "description", "created_at")
+    list_filter = ("hotkey", "created_at", "file_size")
     search_fields = ("file_name",)
 
 
