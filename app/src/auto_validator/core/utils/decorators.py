@@ -7,6 +7,7 @@ from django.conf import settings
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, ValidationError
 from rest_framework.response import Response
 
+from auto_validator.core.models import Hotkey
 from auto_validator.core.utils.utils import get_subnets_by_hotkeys, send_messages
 
 
@@ -18,7 +19,7 @@ def verify_signature_and_route_subnet(view_func):
             nonce = request.headers.get("Nonce")
             hotkey = request.headers.get("Hotkey")
             signature = request.headers.get("Signature")
-            authorization = request.headers.get("Authorization")
+            note = request.headers.get("Note")
 
             nonce_float = float(nonce)
 
@@ -29,10 +30,13 @@ def verify_signature_and_route_subnet(view_func):
             if not hotkey:
                 raise PermissionDenied("Hotkey missing")
 
+            if Hotkey.objects.get(hotkey=hotkey) is None:
+                raise PermissionDenied("Invalid hotkey")
+
             method = request.method
             url = request.build_absolute_uri()
             headers = {
-                "Authorization": authorization,
+                "Note": note,
                 "Nonce": nonce,
                 "Hotkey": hotkey,
             }
@@ -43,7 +47,7 @@ def verify_signature_and_route_subnet(view_func):
 
             data_to_verify = f"{method}{url}{headers}{file_content}".encode()
             if not keypair.verify(data_to_verify, signature=bytes.fromhex(signature)):
-                raise ValidationError("Invalid signature")
+                raise AuthenticationFailed("Invalid signature")
 
             subnets = get_subnets_by_hotkeys(hotkey)
             if not subnets:

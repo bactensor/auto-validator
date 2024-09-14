@@ -10,7 +10,7 @@ def validate_hotkey_length(value):
 
 
 class UploadedFile(models.Model):
-    user = models.ForeignKey("auth.User", on_delete=models.CASCADE)
+    hotkey = models.ForeignKey("Hotkey", on_delete=models.CASCADE)
     file_name = models.CharField(max_length=4095)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -21,7 +21,7 @@ class UploadedFile(models.Model):
     file_size = models.PositiveBigIntegerField(db_comment="File size in bytes")
 
     def __str__(self):
-        return f"{self.file_name!r} uploaded by {self.user}"
+        return f"{self.file_name!r} uploaded by {self.hotkey}"
 
     @property
     def url(self):

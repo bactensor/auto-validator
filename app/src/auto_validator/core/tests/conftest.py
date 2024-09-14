@@ -1,8 +1,12 @@
 from collections.abc import Generator
+from unittest import mock
 
+import bittensor as bt
 import pytest
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
+
+from auto_validator.core.models import Hotkey, Server, Subnet, SubnetSlot, ValidatorInstance
 
 
 @pytest.fixture
@@ -25,10 +29,44 @@ def auth_token(user):
     return token
 
 
+@pytest.mark.django_db
 @pytest.fixture
-def api_client(auth_token):
+def hotkey(wallet):
+    hotkey, _ = Hotkey.objects.get_or_create(hotkey=wallet.hotkey.ss58_address)
+    return hotkey
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def subnet():
+    subnet = Subnet.objects.create(name="test_subnet")
+    return subnet
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def subnet_slot(subnet):
+    subnet_slot = SubnetSlot.objects.create(subnet=subnet, netuid=1)
+    return subnet_slot
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def server():
+    server = Server.objects.create(name="test_server", ip_address="127.0.0.1")
+    return server
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def validator_instance(subnet_slot, server, hotkey):
+    validator_instance = ValidatorInstance.objects.create(subnet_slot=subnet_slot, server=server, hotkey=hotkey)
+    return validator_instance
+
+
+@pytest.fixture
+def api_client():
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Token {auth_token.key}")
     return client
 
 
@@ -42,3 +80,11 @@ def eq():
             return self.func(other)
 
     return EqualityMock
+
+
+@pytest.fixture
+def wallet():
+    wallet = bt.wallet(name="test_wallet", hotkey="test_hotkey")
+    with mock.patch("builtins.input", return_value="1234567890"):
+        wallet.create_if_non_existent()
+    return wallet
