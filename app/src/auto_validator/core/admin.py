@@ -31,6 +31,11 @@ class SubnetAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "description",
+        "mainnet_id",
+        "testnet_id",
+        "owner_nick",
+        "owner_id",
+        "maintainers_id",
         "registered_networks",
     )
     search_fields = ("name", "slots__netuid")

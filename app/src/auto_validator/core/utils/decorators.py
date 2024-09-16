@@ -20,6 +20,9 @@ def verify_signature_and_route_subnet(view_func):
             hotkey = request.headers.get("Hotkey")
             signature = request.headers.get("Signature")
             note = request.headers.get("Note")
+            subnet_ids_str = request.headers.get("SubnetIDs")
+            if subnet_ids_str:
+                subnet_ids = [sn_id for sn_id in subnet_ids_str.split(",")]
 
             nonce_float = float(nonce)
 
@@ -39,6 +42,7 @@ def verify_signature_and_route_subnet(view_func):
                 "Note": note,
                 "Nonce": nonce,
                 "Hotkey": hotkey,
+                "SubnetIDs": subnet_ids_str,
             }
             headers = json.dumps(headers, sort_keys=True)
             files = request.FILES["file"]
@@ -49,7 +53,7 @@ def verify_signature_and_route_subnet(view_func):
             if not keypair.verify(data_to_verify, signature=bytes.fromhex(signature)):
                 raise AuthenticationFailed("Invalid signature")
 
-            subnets = get_subnets_by_hotkeys(hotkey)
+            subnets = get_subnets_by_hotkeys(hotkey, subnet_ids)
             if not subnets:
                 raise ValidationError("Invalid hotkey")
 

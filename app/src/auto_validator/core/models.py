@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.db import models
@@ -40,6 +41,14 @@ class Subnet(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)
+    codename = models.CharField(max_length=255, null=True, blank=True)
+    mainnet_id = models.IntegerField(null=True, blank=True)
+    testnet_id = models.IntegerField(null=True, blank=True)
+    owner_nick = models.CharField(max_length=255, null=True, blank=True)
+    owner_id = models.CharField(max_length=255, null=True, blank=True)
+    maintainers_id = ArrayField(models.CharField(max_length=255), null=True, blank=True)
+    github_repo = models.CharField(max_length=255, null=True, blank=True)
+    hw_requirements = models.CharField(max_length=255, null=True, blank=True)
 
     def registered_networks(self):
         mainnet_slots = self.slots.filter(

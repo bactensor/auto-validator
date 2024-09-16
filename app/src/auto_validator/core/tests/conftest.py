@@ -46,7 +46,7 @@ def subnet():
 @pytest.mark.django_db
 @pytest.fixture
 def subnet_slot(subnet):
-    subnet_slot = SubnetSlot.objects.create(subnet=subnet, netuid=1)
+    subnet_slot = SubnetSlot.objects.create(subnet=subnet, netuid=1, blockchain="mainnet")
     return subnet_slot
 
 

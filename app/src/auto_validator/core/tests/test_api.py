@@ -21,6 +21,7 @@ def test_file_upload_with_valid_signature(api_client, wallet, validator_instance
     }
     headers = {}
     headers["Note"] = ""
+    headers["SubnetIDs"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = wallet.hotkey.ss58_address
     headers_str = json.dumps(headers, sort_keys=True)
@@ -57,6 +58,7 @@ def test_file_upload_with_invalid_signature(api_client, wallet, validator_instan
     }
     headers = {}
     headers["Note"] = ""
+    headers["SubnetIDs"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = wallet.hotkey.ss58_address
     headers["Signature"] = "invalid_signature"
@@ -75,6 +77,7 @@ def test_file_upload_with_missing_hotkey(api_client):
     }
     headers = {}
     headers["Note"] = ""
+    headers["SubnetIDs"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = ""
     headers["Signature"] = "invalid_signature"
@@ -93,6 +96,7 @@ def test_file_upload_with_invalid_hotkey(api_client, wallet):
     }
     headers = {}
     headers["Note"] = ""
+    headers["SubnetIDs"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = "123"
     headers["Signature"] = "invalid_signature"
