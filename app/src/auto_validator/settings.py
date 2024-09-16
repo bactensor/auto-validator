@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "fingerprint",
     "storages",
     "auto_validator.core",
+    "bootstrap5",
 ]
 
 
@@ -403,8 +404,8 @@ STORAGES = {
 
 BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
 
-SUBNETS_GITHUB_URL = env(
-    "SUBNETS_GITHUB_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
+SUBNETS_INFO_GITHUB_URL = env(
+    "SUBNETS_INFO_GITHUB_URL", default="https://raw.githubusercontent.com/drunest/subnets-info/main/subnets.json"
 )
 
 LINODE_API_KEY = env("LINODE_API_KEY", default="")
