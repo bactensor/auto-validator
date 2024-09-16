@@ -99,7 +99,7 @@ def wallet():
         has_hotkey = True
     except bt.KeyFileError:
         if not has_coldkey:
-            process = pexpect.spawn(command1, timeout=500)  # Adjust timeout as needed
+            process = pexpect.spawn(command1, timeout=30)  # Adjust timeout as needed
             try:
                 process.expect("Specify password for key encryption:")
                 process.sendline(password)
@@ -108,8 +108,8 @@ def wallet():
                 process.sendline(password)
 
                 # Handle file already exists prompt
-                process.expect("File .* already exists. Overwrite? (y/N) ")
-                process.sendline("y")
+                # process.expect("File .* already exists. Overwrite? (y/N) ")
+                # process.sendline("y")
 
                 process.expect(pexpect.EOF)  # Wait until the command finishes
             except pexpect.TIMEOUT:
@@ -118,7 +118,7 @@ def wallet():
                 process.close()
 
         if not has_hotkey:
-            process = pexpect.spawn(command2, timeout=500)  # Adjust timeout as needed
+            process = pexpect.spawn(command2, timeout=30)  # Adjust timeout as needed
             try:
                 process.expect(pexpect.EOF)  # Wait until the command finishes
             except pexpect.TIMEOUT:
