@@ -84,15 +84,16 @@ def eq():
 
 @pytest.fixture
 def wallet():
-    coldkey_name = "auto-validator6"
+    coldkey_name = "auto-validator7"
+    hotkey_name = "testhotkey7"
     command1 = f"btcli wallet new_coldkey --wallet.name {coldkey_name}"
-    command2 = f"btcli wallet new_hotkey --wallet.name {coldkey_name} --wallet.hotkey testhotkey5"
+    command2 = f"btcli wallet new_hotkey --wallet.name {coldkey_name} --wallet.hotkey {hotkey_name}"
     has_coldkey = False
     has_hotkey = False
     password = "your_password_here"  # Securely handle the password
 
     try:
-        wallet = bt.wallet(name=coldkey_name, hotkey="testhotkey5")
+        wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
         wallet.coldkeypub
         has_coldkey = True
         wallet.hotkey
@@ -126,6 +127,6 @@ def wallet():
             finally:
                 process.close()
         # Load the wallet again after creation
-        wallet = bt.wallet(name=coldkey_name, hotkey=coldkey_name)
+        wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
 
     return wallet
