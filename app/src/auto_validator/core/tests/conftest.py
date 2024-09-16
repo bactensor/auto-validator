@@ -90,7 +90,7 @@ def wallet():
     command2 = f"btcli wallet new_hotkey --wallet.name {coldkey_name} --wallet.hotkey {hotkey_name}"
     has_coldkey = False
     has_hotkey = False
-    password = "your_password_here"  # Securely handle the password
+    password = "your_password_here"
 
     try:
         wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
@@ -100,7 +100,7 @@ def wallet():
         has_hotkey = True
     except bt.KeyFileError:
         if not has_coldkey:
-            process = pexpect.spawn(command1, timeout=30)  # Adjust timeout as needed
+            process = pexpect.spawn(command1, timeout=30)
             try:
                 process.expect("Specify password for key encryption:")
                 process.sendline(password)
@@ -108,25 +108,20 @@ def wallet():
                 process.expect("Retype your password:")
                 process.sendline(password)
 
-                # Handle file already exists prompt
-                # process.expect("File .* already exists. Overwrite? (y/N) ")
-                # process.sendline("y")
-
-                process.expect(pexpect.EOF)  # Wait until the command finishes
+                process.expect(pexpect.EOF)
             except pexpect.TIMEOUT:
                 print("Timeout occurred while creating coldkey.")
             finally:
                 process.close()
 
         if not has_hotkey:
-            process = pexpect.spawn(command2, timeout=30)  # Adjust timeout as needed
+            process = pexpect.spawn(command2, timeout=30)
             try:
-                process.expect(pexpect.EOF)  # Wait until the command finishes
+                process.expect(pexpect.EOF)
             except pexpect.TIMEOUT:
                 print("Timeout occurred while creating hotkey.")
             finally:
                 process.close()
-        # Load the wallet again after creation
         wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
 
     return wallet
