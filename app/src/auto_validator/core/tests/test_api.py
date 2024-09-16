@@ -66,7 +66,7 @@ def test_file_upload_with_invalid_signature(api_client, wallet, validator_instan
 
 
 @pytest.mark.django_db
-def test_file_upload_with_missing_hotkey(api_client, wallet, validator_instance):
+def test_file_upload_with_missing_hotkey(api_client):
     file_content = io.BytesIO(b"file content")
     file_content.name = "testfile.txt"
 
@@ -84,7 +84,7 @@ def test_file_upload_with_missing_hotkey(api_client, wallet, validator_instance)
 
 
 @pytest.mark.django_db
-def test_file_upload_with_invalid_hotkey(api_client, wallet, validator_instance):
+def test_file_upload_with_invalid_hotkey(api_client, wallet):
     file_content = io.BytesIO(b"file content")
     file_content.name = "testfile.txt"
 

@@ -1,9 +1,8 @@
 from collections.abc import Generator
-from unittest import mock
 
 import bittensor as bt
+import pexpect
 import pytest
-import subprocess
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
@@ -85,12 +84,48 @@ def eq():
 
 @pytest.fixture
 def wallet():
-    process = subprocess.Popen(
-        ['python3', '-c', f'import bittensor as bt; wallet = bt.wallet(name="test_wallet", hotkey="testhotkey"); wallet.create_if_non_existent()'],
-        stdin=subprocess.PIPE,
-        text=True
-    )
-    process.communicate(input="123123123")
-    wallet = bt.wallet(name="test_wallet", hotkey="testhotkey")
-    wallet.create_if_non_existent()
+    coldkey_name = "auto-validator6"
+    command1 = f"btcli wallet new_coldkey --wallet.name {coldkey_name}"
+    command2 = f"btcli wallet new_hotkey --wallet.name {coldkey_name} --wallet.hotkey testhotkey5"
+    has_coldkey = False
+    has_hotkey = False
+    password = "your_password_here"  # Securely handle the password
+
+    try:
+        wallet = bt.wallet(name=coldkey_name, hotkey="testhotkey5")
+        wallet.coldkeypub
+        has_coldkey = True
+        wallet.hotkey
+        has_hotkey = True
+    except bt.KeyFileError:
+        if not has_coldkey:
+            process = pexpect.spawn(command1, timeout=500)  # Adjust timeout as needed
+            try:
+                process.expect("Specify password for key encryption:")
+                process.sendline(password)
+
+                process.expect("Retype your password:")
+                process.sendline(password)
+
+                # Handle file already exists prompt
+                process.expect("File .* already exists. Overwrite? (y/N) ")
+                process.sendline("y")
+
+                process.expect(pexpect.EOF)  # Wait until the command finishes
+            except pexpect.TIMEOUT:
+                print("Timeout occurred while creating coldkey.")
+            finally:
+                process.close()
+
+        if not has_hotkey:
+            process = pexpect.spawn(command2, timeout=500)  # Adjust timeout as needed
+            try:
+                process.expect(pexpect.EOF)  # Wait until the command finishes
+            except pexpect.TIMEOUT:
+                print("Timeout occurred while creating hotkey.")
+            finally:
+                process.close()
+        # Load the wallet again after creation
+        wallet = bt.wallet(name=coldkey_name, hotkey=coldkey_name)
+
     return wallet
