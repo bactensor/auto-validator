@@ -5,7 +5,7 @@ import requests
 from django.conf import settings
 from django.shortcuts import redirect, render
 
-from ..models import Hotkey, Subnet, SubnetSlot, ValidatorInstance
+from ..models import Hotkey, Server, Subnet, ValidatorInstance
 
 GITHUB_URL = settings.SUBNETS_INFO_GITHUB_URL
 
@@ -46,24 +46,30 @@ def fetch_and_compare_subnets(request):
     )
 
 
-def get_subnets_by_hotkeys(hotkey_ss58, subnet_ids):
+def get_subnet_by_hotkey(hotkey_ss58, ip_address):
     try:
         hotkey = Hotkey.objects.get(hotkey=hotkey_ss58)
-        subnet_slots = []
-        for subnet_id in subnet_ids:
-            if subnet_id[0] == "t":
-                netuid = int(subnet_id[1:])
-                subnet_slots.append(SubnetSlot.objects.filter(netuid=netuid, blockchain="testnet").first())
-            else:
-                netuid = int(subnet_id)
-                subnet_slots.append(SubnetSlot.objects.filter(netuid=netuid, blockchain="mainnet").first())
-            validators = ValidatorInstance.objects.filter(hotkey=hotkey, subnet_slot__in=subnet_slots).distinct()
+        server = Server.objects.get(ip_address=ip_address)
+        validator = ValidatorInstance.objects.get(hotkey=hotkey, server=server)
     except ValidatorInstance.DoesNotExist:
         return None
-    return [validator.subnet_slot.subnet for validator in validators]
+    return validator.subnet_slot.subnet
 
 
-def send_messages(subnets):
-    for subnet in subnets:
-        # send message to subnet operators
-        pass
+def send_messages(subnet, subnet_identifier):
+    """
+    This function sends messages to subnet operators.
+    Args:   subnet: Subnet object
+            subnet_identifier: SubnetID
+    """
+    # send message to subnet operators
+    pass
+
+
+def get_user_ip(request):
+    ip_address = request.META.get("HTTP_X_FORWARDED_FOR")
+    if ip_address:
+        ip_address = ip_address.split(",")[0]
+    else:
+        ip_address = request.META.get("REMOTE_ADDR")
+    return ip_address

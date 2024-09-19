@@ -46,9 +46,9 @@ class Subnet(models.Model):
     testnet_id = models.IntegerField(null=True, blank=True)
     owner_nick = models.CharField(max_length=255, null=True, blank=True)
     owner_id = models.CharField(max_length=255, null=True, blank=True)
-    maintainers_id = ArrayField(models.CharField(max_length=255), null=True, blank=True)
+    maintainers_ids = ArrayField(models.CharField(max_length=255), null=True, blank=True)
     github_repo = models.CharField(max_length=255, null=True, blank=True)
-    hw_requirements = models.CharField(max_length=255, null=True, blank=True)
+    hw_requirements = models.TextField(max_length=4095, null=True, blank=True)
 
     def registered_networks(self):
         mainnet_slots = self.slots.filter(

@@ -94,9 +94,9 @@ def wallet():
 
     try:
         wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
-        wallet.coldkeypub
+        wallet.coldkeypub  # make sure wallet has coldkey file, if not, it will raise an exception
         has_coldkey = True
-        wallet.hotkey
+        wallet.hotkey  # make sure wallet has hotkey file, if not, it will raise an exception
         has_hotkey = True
     except bt.KeyFileError:
         if not has_coldkey:

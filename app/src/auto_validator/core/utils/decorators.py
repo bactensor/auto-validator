@@ -8,7 +8,7 @@ from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, Va
 from rest_framework.response import Response
 
 from auto_validator.core.models import Hotkey
-from auto_validator.core.utils.utils import get_subnets_by_hotkeys, send_messages
+from auto_validator.core.utils.utils import get_subnet_by_hotkey, get_user_ip, send_messages
 
 
 def verify_signature_and_route_subnet(view_func):
@@ -20,9 +20,7 @@ def verify_signature_and_route_subnet(view_func):
             hotkey = request.headers.get("Hotkey")
             signature = request.headers.get("Signature")
             note = request.headers.get("Note")
-            subnet_ids_str = request.headers.get("SubnetIDs")
-            if subnet_ids_str:
-                subnet_ids = [sn_id for sn_id in subnet_ids_str.split(",")]
+            subnet_id = request.headers.get("SubnetID")
 
             nonce_float = float(nonce)
 
@@ -33,7 +31,7 @@ def verify_signature_and_route_subnet(view_func):
             if not hotkey:
                 raise PermissionDenied("Hotkey missing")
 
-            if Hotkey.objects.get(hotkey=hotkey) is None:
+            if not Hotkey.objects.get(hotkey=hotkey):
                 raise PermissionDenied("Invalid hotkey")
 
             method = request.method
@@ -42,7 +40,7 @@ def verify_signature_and_route_subnet(view_func):
                 "Note": note,
                 "Nonce": nonce,
                 "Hotkey": hotkey,
-                "SubnetIDs": subnet_ids_str,
+                "SubnetID": subnet_id,
             }
             headers = json.dumps(headers, sort_keys=True)
             files = request.FILES["file"]
@@ -53,11 +51,12 @@ def verify_signature_and_route_subnet(view_func):
             if not keypair.verify(data_to_verify, signature=bytes.fromhex(signature)):
                 raise AuthenticationFailed("Invalid signature")
 
-            subnets = get_subnets_by_hotkeys(hotkey, subnet_ids)
-            if not subnets:
+            ip_address = get_user_ip(request)
+            to_subnet = get_subnet_by_hotkey(hotkey, ip_address)
+            if not to_subnet:
                 raise ValidationError("Invalid hotkey")
 
-            send_messages(subnets)
+            send_messages(to_subnet, subnet_identifier=subnet_id)
 
         except AuthenticationFailed as e:
             return Response({"detail": str(e)}, status=401)
@@ -66,7 +65,7 @@ def verify_signature_and_route_subnet(view_func):
         except ValidationError as e:
             return Response({"detail": str(e)}, status=400)
         except Exception:
-            return Response({"detail": "Invalid operation"}, status=500)
+            return Response({"detail": "Invalid Operation"}, status=500)
 
         return view_func(view, *args, **kwargs)
 

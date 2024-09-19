@@ -21,7 +21,7 @@ def test_file_upload_with_valid_signature(api_client, wallet, validator_instance
     }
     headers = {}
     headers["Note"] = ""
-    headers["SubnetIDs"] = "1"
+    headers["SubnetID"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = wallet.hotkey.ss58_address
     headers_str = json.dumps(headers, sort_keys=True)
@@ -38,7 +38,16 @@ def test_file_upload_with_valid_signature(api_client, wallet, validator_instance
     assert response_data["file_name"] == "testfile.txt"
     assert response_data["file_size"] == 12
     assert response_data["description"] == ""
-    assert re.match(r"^/media/" + wallet.hotkey.ss58_address + r"-.*-testfile.txt$", response_data["url"])
+    assert re.match(
+        r"^/media/"
+        + validator_instance.subnet_slot.subnet.name
+        + r"-"
+        + str(validator_instance.subnet_slot.netuid)
+        + r"-"
+        + wallet.hotkey.ss58_address
+        + r"-.*-testfile.txt$",
+        response_data["url"],
+    )
 
     assert UploadedFile.objects.count() == 1
     uploaded_file = UploadedFile.objects.first()
@@ -58,7 +67,7 @@ def test_file_upload_with_invalid_signature(api_client, wallet, validator_instan
     }
     headers = {}
     headers["Note"] = ""
-    headers["SubnetIDs"] = "1"
+    headers["SubnetID"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = wallet.hotkey.ss58_address
     headers["Signature"] = "invalid_signature"
@@ -77,7 +86,7 @@ def test_file_upload_with_missing_hotkey(api_client):
     }
     headers = {}
     headers["Note"] = ""
-    headers["SubnetIDs"] = "1"
+    headers["SubnetID"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = ""
     headers["Signature"] = "invalid_signature"
@@ -96,7 +105,7 @@ def test_file_upload_with_invalid_hotkey(api_client, wallet):
     }
     headers = {}
     headers["Note"] = ""
-    headers["SubnetIDs"] = "1"
+    headers["SubnetID"] = "1"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = "123"
     headers["Signature"] = "invalid_signature"

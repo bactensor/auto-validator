@@ -26,11 +26,14 @@ class UploadedFileSerializer(serializers.ModelSerializer):
         meta_info = validated_data.pop("meta_info")
         # Generate a semi-random name for the file to prevent guessing the file name
         hotkey_str = meta_info["hotkey"]
-        semi_random_name = f"{hotkey_str}-{secrets.token_urlsafe(16)}-{file.name}"
+        if not (hotkey := Hotkey.objects.get(hotkey=hotkey_str)):
+            raise serializers.ValidationError("Invalid Hotkey")
+        subnet_name = meta_info["subnet_name"]
+        netuid = meta_info["netuid"]
+        semi_random_name = f"{subnet_name}-{netuid}-{hotkey_str}-{secrets.token_urlsafe(32)}-{file.name}"
         filename_in_storage = default_storage.save(semi_random_name, file, max_length=4095)
         hotkey = Hotkey.objects.get(hotkey=hotkey_str)
-        if not hotkey:
-            raise serializers.ValidationError("Invalid Hotkey")
+
         return UploadedFile.objects.create(
             hotkey=hotkey,
             file_name=file.name,
