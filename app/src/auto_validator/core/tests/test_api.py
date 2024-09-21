@@ -25,7 +25,8 @@ def test_file_upload_with_valid_signature(api_client, wallet, validator_instance
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = wallet.hotkey.ss58_address
     headers_str = json.dumps(headers, sort_keys=True)
-    data_to_sign = f"POSThttp://testserver{V1_FILES_URL}{headers_str}{file_content.read()}".encode()
+    decoded_file_content = file_content.read().decode(errors="ignore")
+    data_to_sign = f"POSThttp://testserver{V1_FILES_URL}{headers_str}{decoded_file_content}".encode()
     file_content.seek(0)
     signature = wallet.hotkey.sign(
         data_to_sign,
