@@ -44,7 +44,9 @@ def verify_signature_and_route_subnet(view_func):
             }
             headers = json.dumps(headers, sort_keys=True)
             files = request.FILES["file"]
-            file_content = files.read()
+            if not files:
+                raise ValidationError("File missing")
+            file_content = files.read().decode(errors="ignore")
             keypair = bt.Keypair(ss58_address=hotkey)
 
             data_to_verify = f"{method}{url}{headers}{file_content}".encode()
