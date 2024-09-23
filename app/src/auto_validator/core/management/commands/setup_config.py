@@ -65,7 +65,7 @@ class Command(BaseCommand):
         # Initialize a ConfigParser object
         config = configparser.ConfigParser()
 
-        config["subnet"] = {"condename": codename, "autovalidator_address": autovalidator_address}
+        config["subnet"] = {"codename": codename, "autovalidator_address": autovalidator_address}
 
         # Write the configuration to config.ini
         try:
