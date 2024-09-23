@@ -24,7 +24,7 @@ docker compose stop $SERVICES
 
 # start the app container only in order to perform migrations
 docker compose up -d db  # in case it hasn't been launched before
-docker compose run --rm app sh -c "python manage.py wait_for_database --timeout 10; python manage.py migrate"
+docker compose run --rm app sh -c "python manage.py wait_for_database --timeout 10; python manage.py migrate; python manage.py setup_config"
 
 # start everything
 docker compose up -d
