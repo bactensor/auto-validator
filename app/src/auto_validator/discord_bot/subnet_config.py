@@ -17,7 +17,7 @@ class DiscordSubnetConfig(BaseModel):
     )
     subnet_codename: str = Field(..., min_length=1)
     netuid: int = Field(..., ge=0, le=32767)
-    realm: Literal["testnet", "mainnet"] = Field(...)
+    realm: Literal["testnet", "mainnet", "devnet"] = Field(...)
 
     @field_validator('maintainers_ids', mode='before')
     def validate_maintainer_ids(cls, users):
@@ -30,7 +30,7 @@ class DiscordSubnetConfig(BaseModel):
         return users
 
     def generate_channel_name(self) -> ChannelName:
-        prefix = "t" if self.realm == "testnet" else ""
+        prefix = "t" if self.realm == "testnet" else "d" if self.realm == "devnet" else ""
         return f"{prefix}{self.netuid:03d}-{self.subnet_codename}"
 
     def __repr__(self) -> str:
@@ -38,22 +38,16 @@ class DiscordSubnetConfig(BaseModel):
 
 
 class DiscordSubnetConfigFactory:
-    _used_codenames: Set[str] = set()
     _used_realm_netuid_pairs: Set[Tuple[str, int]] = set()
 
     @classmethod
     def reset_state(cls):
-        cls._used_codenames.clear()
         cls._used_realm_netuid_pairs.clear()
 
-    def validate_unique(subnet: DiscordSubnetConfig) -> None:
-        if subnet.subnet_codename in DiscordSubnetConfigFactory._used_codenames:
-            raise ValueError(f"subnet_codename '{subnet.subnet_codename}' must be unique.")
-        
+    def validate_unique(subnet: DiscordSubnetConfig) -> None:  
         if (realm_netuid_pair := (subnet.realm, subnet.netuid)) in DiscordSubnetConfigFactory._used_realm_netuid_pairs:
             raise ValueError(f"The combination of realm '{subnet.realm}' and netuid '{subnet.netuid}' must be unique.")
         
-        DiscordSubnetConfigFactory._used_codenames.add(subnet.subnet_codename)
         DiscordSubnetConfigFactory._used_realm_netuid_pairs.add(realm_netuid_pair)
 
     @classmethod
@@ -82,7 +76,6 @@ class SubnetConfigManager:
         self.subnets_config: list[DiscordSubnetConfig]
 
     @tasks.loop(minutes=10)  # Adjust the interval as needed
-
     async def update_config_and_synchronize(self) -> None:
         """
         Periodically updates the configuration from remote repo and synchronizes the Discord server.
@@ -93,6 +86,7 @@ class SubnetConfigManager:
             await self.load_config_from_remote_repo()
             await self.synchronize_discord_with_subnet_config()
             self.logger.info("Synchronization complete.")
+            DiscordSubnetConfigFactory.reset_state()
         except Exception as e:
             self.logger.exception("Unexpected error during remote repo synchronization")
 
@@ -126,10 +120,10 @@ class SubnetConfigManager:
         guild = await self.bot._get_guild_or_raise(int(self.config["GUILD_ID"]))
 
         current_channels_users_mapping = self.get_current_channel_user_mapping(guild)
-        desired_channels_users_mapping = self.get_desired_channel_user_mapping()
+        desired_channels_to_users_mapping = self.get_desired_channel_user_mapping()
 
         missing_channels, channels_to_archieve = self.determine_missing_and_unnecessary_channels(current_channels_users_mapping.keys(),
-                                                                                                desired_channels_users_mapping.keys())
+                                                                                                desired_channels_to_users_mapping.keys())
         tasks = [
             *(self.bot._archieve_channel(guild, channel_name) for channel_name in channels_to_archieve),
             *(self.bot._create_channel(guild, channel_name) for channel_name in missing_channels)
@@ -138,10 +132,10 @@ class SubnetConfigManager:
         await asyncio.gather(*tasks)
 
         tasks = []
-        updated_channels_users_mapping = self.get_current_channel_user_mapping(guild)
-        for channel_name, desired_maintainer_ids in desired_channels_users_mapping.items():
+        updated_channels_to_users_mapping = self.get_current_channel_user_mapping(guild)
+        for channel_name, desired_maintainer_ids in desired_channels_to_users_mapping.items():
             missing_users, users_to_remove = self.determine_missing_and_unnecessary_users(
-                set(updated_channels_users_mapping[channel_name]), set(desired_maintainer_ids))
+                set(updated_channels_to_users_mapping[channel_name]), set(desired_maintainer_ids))
             tasks.extend(self.bot._send_invite_or_grant_permissions(user, channel_name) for user in missing_users)
             tasks.extend(self.bot._revoke_channel_permissions(member_id, channel_name) for member_id in users_to_remove)
 

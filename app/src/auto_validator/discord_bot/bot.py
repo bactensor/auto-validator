@@ -16,16 +16,24 @@ import discord
 import logging
 import asyncio
 import re
+import redis
+import json
 
 from discord.ext import commands
-
-from .config import load_config
+from django.conf import settings
+from .bot_utils import validate_bot_settings
 from .subnet_config import SubnetConfigManager, UserID, ChannelName
 
 class DiscordBot(commands.Bot):
-    def __init__(self, config: Optional[Dict[str, Any]] = None, 
-                 logger: Optional[logging.Logger] = None) -> None:
-        self.config: Dict[str, Any] = config or load_config()
+    def __init__(self, logger: Optional[logging.Logger] = None) -> None:
+        validate_bot_settings()
+        self.config: Dict[str, Any] = {
+            "DISCORD_BOT_TOKEN": settings.DISCORD_BOT_TOKEN,
+            "GUILD_ID": settings.GUILD_ID,
+            "SUBNET_CONFIG_URL": settings.SUBNET_CONFIG_URL,
+            "BOT_NAME": settings.BOT_NAME,
+            "CATEGORY_NAME": settings.CATEGORY_NAME,
+        }
         self.logger: logging.Logger = logger
         self.config_manager = SubnetConfigManager(self, self.logger, self.config)
         self.category_creation_lock = asyncio.Lock()
@@ -41,10 +49,32 @@ class DiscordBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
         self.logger.debug("DiscordBot initialized.")
 
-        self.pending_users_to_channels_map: Dict[UserID, ChannelName] = {}
+        # Connect to Redis
+        self.redis_client = redis.Redis(host='localhost', port=8379, db=0)
 
     async def start_bot(self) -> None:
-        await self.start(self.config["DISCORD_BOT_TOKEN"])
+        await self.start(self.config['DISCORD_BOT_TOKEN'])
+
+    async def setup_hook(self) -> None:
+        asyncio.create_task(self.listen_to_redis())
+
+    async def listen_to_redis(self):
+        pubsub = self.redis_client.pubsub()
+        pubsub.subscribe('bot_commands')
+        while True:
+            message = pubsub.get_message()
+            if message and message['type'] == 'message':
+                data = json.loads(message['data'])
+                await self.handle_command(data)
+            await asyncio.sleep(0.1)
+
+    async def handle_command(self, data):
+        action = data.get('action')
+        if action == 'send_message':
+            subnet_codename = data['channel_name']
+            message = data['message']
+            realm = data['realm']
+            await self.send_message_to_channel(subnet_codename, message, realm)
 
     async def on_ready(self) -> None:
         """
@@ -65,13 +95,15 @@ class DiscordBot(commands.Bot):
         user_id = UserID(member.id)
 
         # Check if the user has a pending invite with a specific channel
-        if (channel_name := self.pending_users_to_channels_map.get(user_id)) is not None:
-            # Grant the user permissions to the specified channel
-            await self._grant_channel_permissions(user_id, channel_name)
-            self.logger.info(f"Granted permissions to {member.name} for channel '{channel_name}'.")
+        channels = await self._get_pending_user_channels(user_id)
+        for channel in channels:
+            if channel:
+                # Grant the user permissions to the specified channel
+                await self._grant_channel_permissions(user_id, channel)
+                self.logger.info(f"Granted permissions to {member.name} for channel '{channel}'.")
 
-            # Clean up the pending invite entry as it's no longer needed
-            del self.pending_users_to_channels_map[user_id]
+        # Clean up the pending invite entry as it's no longer needed
+        await self._remove_pending_user(user_id)
 
     async def _create_channel(self, guild: discord.Guild, channel_name: ChannelName) -> None:
         normalized_category_name = self.config["CATEGORY_NAME"].strip().lower()
@@ -89,9 +121,9 @@ class DiscordBot(commands.Bot):
                 guild.categories
             )
                 if category is None:
-                    self.logger.info(f"Category '{self.config["CATEGORY_NAME"]}' not found. Creating new category.")
+                    self.logger.info(f"Category '{self.config['CATEGORY_NAME']}' not found. Creating new category.")
                     category = await guild.create_category(name=self.config["CATEGORY_NAME"])
-                    self.logger.info(f"Category '{self.config["CATEGORY_NAME"]}' created in guild {guild.name}.")
+                    self.logger.info(f"Category '{self.config['CATEGORY_NAME']}' created in guild {guild.name}.")
 
 
         # Overwriting default permissions for the channel to make it private
@@ -111,18 +143,41 @@ class DiscordBot(commands.Bot):
 
         channel = discord.utils.get(guild.text_channels, name=channel_name)
             
-        if channel and self._is_bot_channel(channel_name):
+        if channel and self._is_bot_channel(channel_name) and channel.category != archive_category:
             self.logger.info(f"Channel '{channel_name}' is being moved to the 'Archive' category.")
             await channel.edit(category=archive_category, reason="Channel moved to Archive as it's not listed in the subnet config.")
 
-    async def send_message_to_channel(self, channel_name: ChannelName, message: str) -> None:
+    async def send_message_to_channel(self, subnet_codename: str, message: str, realm: str) -> None:
         await self.wait_until_ready()
+
         guild = await self._get_guild_or_raise(int(self.config["GUILD_ID"]))
-        channel = discord.utils.get(guild.text_channels, name=channel_name)
+        category = discord.utils.get(guild.categories, name=self.config['CATEGORY_NAME'])
+
+        if category is None:
+            self.logger.error(
+                f"Category named '{self.config['CATEGORY_NAME']}' not found in guild '{guild.name}'"
+            )
+            raise ValueError(
+                f"Category named '{self.config['CATEGORY_NAME']}' not found in guild '{guild.name}'"
+            )
+
+        channels = category.text_channels
+        channel = await self._get_channel(channels, subnet_codename, realm)
+
         if channel is None:
-            self.logger.error(f"Channel named '{channel_name}' not found in guild '{guild.name}'")
-            raise ValueError(f"Channel named '{channel_name}' not found in guild '{guild.name}'")
+            self.logger.error(f"Channel named '{channel.name}' not found in guild '{guild.name}'")
+            raise ValueError(f"Channel named '{channel.name}' not found in guild '{guild.name}'")
         await channel.send(message)
+
+    async def _get_channel(self, channels, subnet_codename, realm):
+        prefix = "t" if realm == "testnet" else "d" if realm == "devnet" else ""
+        pattern = re.compile(rf"^{prefix}\d{{3}}-{subnet_codename}$")
+
+        for channel in channels:
+            if pattern.match(channel.name):
+                return channel
+            
+        return None
 
     async def _send_invite_link(
         self, user_id: UserID, channel_name: ChannelName
@@ -145,7 +200,6 @@ class DiscordBot(commands.Bot):
             user: Optional[discord.User] = await self.fetch_user(user_id)
             await user.send(f"Join the server using this invite link: {invite.url}")
             self.logger.info(f"Sent invite to {user.name}.")
-            self.pending_users_to_channels_map[user_id] = channel_name
         except discord.NotFound:
             self.logger.error(f"User with ID {user_id} not found.")
         except discord.HTTPException as e:
@@ -199,9 +253,12 @@ class DiscordBot(commands.Bot):
         guild = await self._get_guild_or_raise(int(self.config["GUILD_ID"]))
 
         member: Optional[discord.Member] = guild.get_member(user_id)
-
-        if member is None:
+        pending_user_channels: list[ChannelName] = await self._get_pending_user_channels(user_id)
+        if member is None and len(pending_user_channels) == 0:
+            await self._add_pending_user(user_id, channel_name)
             await self._send_invite_link(user_id, channel_name)
+        elif member is None:
+            await self._add_pending_user(user_id, channel_name)
         else:
             await self._grant_channel_permissions(user_id, channel_name)
 
@@ -248,7 +305,7 @@ class DiscordBot(commands.Bot):
         )
              
     def _is_bot_channel(self, channel_name: ChannelName) -> bool:
-        bot_channel_regex = r"^t?\d{3}-[\S]+$"
+        bot_channel_regex = r"^[td]?\d{3}-[\S]+$"
         return re.match(bot_channel_regex, channel_name) is not None
     
     async def close(self):
@@ -261,6 +318,19 @@ class DiscordBot(commands.Bot):
             self.logger.error(f"Guild with ID {guild_id} not found.")
             raise ValueError(f"Guild with ID {guild_id} not found.")
         return guild
+    
+    async def _add_pending_user(self, user_id: UserID, channel_name: ChannelName):
+        redis_key = f'pending_users:{user_id}'
+        self.redis_client.sadd(redis_key, channel_name)
+    
+    async def _remove_pending_user(self, user_id: UserID):
+        redis_key = f'pending_users:{user_id}'
+        self.redis_client.delete(redis_key)
+
+    async def _get_pending_user_channels(self, user_id: UserID) -> list[ChannelName]:
+        redis_key = f'pending_users:{user_id}'
+        channels = self.redis_client.smembers(redis_key)
+        return [ChannelName(ch.decode('utf-8')) for ch in channels]
 
     async def __aenter__(self):
         self._bot_task = asyncio.create_task(self.start_bot())
@@ -272,7 +342,6 @@ class DiscordBot(commands.Bot):
         await self._bot_task
 
 if __name__ == "__main__":
-    config: Dict[str, Any] = load_config()
-    logger: logging.Logger = setup_logger(config)
-    bot: DiscordBot = DiscordBot(config, logger)
+    logger = logging.getLogger('bot')
+    bot: DiscordBot = DiscordBot(logger)
     asyncio.run(bot.start_bot())

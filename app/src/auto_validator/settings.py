@@ -10,8 +10,6 @@ from functools import wraps
 import environ
 import structlog
 
-from .discord_bot.config import load_config
-
 # from celery.schedules import crontab
 root = environ.Path(__file__) - 2
 
@@ -77,6 +75,7 @@ INSTALLED_APPS = [
     "fingerprint",
     "storages",
     "auto_validator.core",
+    "auto_validator.discord_bot",
 ]
 
 
@@ -415,17 +414,14 @@ STORAGES = {
 
 BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
 
-SUBNETS_GITHUB_URL = env(
-    "SUBNETS_GITHUB_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
+SUBNET_CONFIG_URL = env(
+    "SUBNET_CONFIG_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
 )
 
 LINODE_API_KEY = ""
 
-# Discord bot config
-config = load_config()
-DISCORD_BOT_TOKEN = config["DISCORD_BOT_TOKEN"]
-GUILD_ID = int(config["GUILD_ID"])
-BOT_NAME = config["BOT_NAME"]
-CATEGORY_NAME = config["CATEGORY_NAME"]
-SUBNET_CONFIG_URL = config["SUBNET_CONFIG_URL"]
+DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN")
+GUILD_ID = int(env("GUILD_ID"))
+BOT_NAME = env("BOT_NAME")
+CATEGORY_NAME = env("CATEGORY_NAME")
 
