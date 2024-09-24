@@ -1,7 +1,10 @@
-from django.core.management.base import BaseCommand
 import asyncio
 import logging
+
+from django.core.management.base import BaseCommand
+
 from auto_validator.discord_bot.bot import DiscordBot
+
 
 class Command(BaseCommand):
     help = 'Run the Discord bot'

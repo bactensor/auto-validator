@@ -10,24 +10,25 @@ Usage:
 Instantiate `DiscordBot` with a configuration and call `start_bot()` to run the bot.
 """
 
-from typing import Any, Dict, Optional
+import asyncio
+import json
+import logging
+import re
+from typing import Any
 
 import discord
-import logging
-import asyncio
-import re
 import redis
-import json
-
 from discord.ext import commands
 from django.conf import settings
+
 from .bot_utils import validate_bot_settings
-from .subnet_config import SubnetConfigManager, UserID, ChannelName
+from .subnet_config import ChannelName, SubnetConfigManager, UserID
+
 
 class DiscordBot(commands.Bot):
-    def __init__(self, logger: Optional[logging.Logger] = None) -> None:
+    def __init__(self, logger: logging.Logger | None = None) -> None:
         validate_bot_settings()
-        self.config: Dict[str, Any] = {
+        self.config: dict[str, Any] = {
             "DISCORD_BOT_TOKEN": settings.DISCORD_BOT_TOKEN,
             "GUILD_ID": settings.GUILD_ID,
             "SUBNET_CONFIG_URL": settings.SUBNET_CONFIG_URL,
@@ -188,7 +189,7 @@ class DiscordBot(commands.Bot):
 
         guild = await self._get_guild_or_raise(int(self.config["GUILD_ID"]))
 
-        channel: Optional[discord.TextChannel] = discord.utils.get(
+        channel: discord.TextChannel | None = discord.utils.get(
             guild.text_channels, name=channel_name
         )
         if channel is None:
@@ -197,7 +198,7 @@ class DiscordBot(commands.Bot):
 
         invite = await channel.create_invite(max_uses=1, unique=True)
         try:
-            user: Optional[discord.User] = await self.fetch_user(user_id)
+            user: discord.User | None = await self.fetch_user(user_id)
             await user.send(f"Join the server using this invite link: {invite.url}")
             self.logger.info(f"Sent invite to {user.name}.")
         except discord.NotFound:
@@ -215,14 +216,14 @@ class DiscordBot(commands.Bot):
         guild = await self._get_guild_or_raise(int(self.config["GUILD_ID"]))
 
         # Check if the user is already a member of the server
-        member: Optional[discord.Member] = guild.get_member(user_id)
+        member: discord.Member | None = guild.get_member(user_id)
 
         if member is None:
             self.logger.error(f"User with ID {user_id} is not in the server.")
             raise ValueError(f"User with ID {user_id} is not in the server.")
             
         # Find the channel by name
-        channel: Optional[discord.TextChannel] = discord.utils.get(
+        channel: discord.TextChannel | None = discord.utils.get(
             guild.text_channels, name=channel_name
         )
 
@@ -252,7 +253,7 @@ class DiscordBot(commands.Bot):
 
         guild = await self._get_guild_or_raise(int(self.config["GUILD_ID"]))
 
-        member: Optional[discord.Member] = guild.get_member(user_id)
+        member: discord.Member | None = guild.get_member(user_id)
         pending_user_channels: list[ChannelName] = await self._get_pending_user_channels(user_id)
         if member is None and len(pending_user_channels) == 0:
             await self._add_pending_user(user_id, channel_name)
@@ -272,7 +273,7 @@ class DiscordBot(commands.Bot):
         guild = await self._get_guild_or_raise(int(self.config["GUILD_ID"]))
 
         # Check if the user is already a member of the server
-        member: Optional[discord.Member] = guild.get_member(user_id)
+        member: discord.Member | None = guild.get_member(user_id)
 
         if member is None:
             self.logger.error(f"User with ID {user_id} is not in the server.")
@@ -282,7 +283,7 @@ class DiscordBot(commands.Bot):
             return
 
         # Find the channel by name
-        channel: Optional[discord.TextChannel] = discord.utils.get(
+        channel: discord.TextChannel | None = discord.utils.get(
             guild.text_channels, name=channel_name
         )
 
@@ -313,7 +314,7 @@ class DiscordBot(commands.Bot):
         await super().close()
 
     async def _get_guild_or_raise(self, guild_id: int) -> discord.Guild:
-        guild: Optional[discord.Guild] = self.get_guild(guild_id)
+        guild: discord.Guild | None = self.get_guild(guild_id)
         if guild is None:
             self.logger.error(f"Guild with ID {guild_id} not found.")
             raise ValueError(f"Guild with ID {guild_id} not found.")

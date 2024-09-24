@@ -1,5 +1,6 @@
 from django.conf import settings
 
+
 def validate_bot_settings():
     required_settings = [
         "DISCORD_BOT_TOKEN",

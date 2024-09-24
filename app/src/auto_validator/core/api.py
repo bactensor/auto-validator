@@ -1,9 +1,11 @@
 from rest_framework import mixins, parsers, routers, viewsets
 from rest_framework.permissions import AllowAny
+
 from auto_validator.core.models import UploadedFile
 from auto_validator.core.serializers import UploadedFileSerializer
-from .utils.bot import trigger_bot_send_message
+
 from .authentication import HotkeyAuthentication
+from .utils.bot import trigger_bot_send_message
 
 
 class FilesViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):

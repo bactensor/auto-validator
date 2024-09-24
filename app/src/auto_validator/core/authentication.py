@@ -1,7 +1,10 @@
-from rest_framework import authentication, exceptions
-from .models import Hotkey
-from bittensor import Keypair
 import json
+
+from bittensor import Keypair
+from rest_framework import authentication, exceptions
+
+from .models import Hotkey
+
 
 class HotkeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):

@@ -1,10 +1,11 @@
-from pydantic import BaseModel, ValidationError, Field, field_validator
-from typing import Any, Dict, Set, Tuple, Literal, NewType
-from discord.ext import tasks
-import aiohttp
-import logging
-import discord
 import asyncio
+import logging
+from typing import Any, Literal, NewType
+
+import aiohttp
+import discord
+from discord.ext import tasks
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 ChannelName = NewType("ChannelName", str)
 UserID = NewType('UserID', int)
@@ -38,7 +39,7 @@ class DiscordSubnetConfig(BaseModel):
 
 
 class DiscordSubnetConfigFactory:
-    _used_realm_netuid_pairs: Set[Tuple[str, int]] = set()
+    _used_realm_netuid_pairs: set[tuple[str, int]] = set()
 
     @classmethod
     def reset_state(cls):
@@ -69,7 +70,7 @@ class SubnetConfigManager:
         This class provides funcionality for updating the config
           and synchronizing it with the discord server state
     """
-    def __init__(self, bot: discord.Client, logger: logging.Logger, config: Dict[str, Any]):
+    def __init__(self, bot: discord.Client, logger: logging.Logger, config: dict[str, Any]):
         self.bot = bot
         self.config = config
         self.logger = logger
@@ -87,7 +88,7 @@ class SubnetConfigManager:
             await self.synchronize_discord_with_subnet_config()
             self.logger.info("Synchronization complete.")
             DiscordSubnetConfigFactory.reset_state()
-        except Exception as e:
+        except Exception:
             self.logger.exception("Unexpected error during remote repo synchronization")
 
     async def load_config_from_remote_repo(self) -> None:
@@ -141,7 +142,7 @@ class SubnetConfigManager:
 
         await asyncio.gather(*tasks)
 
-    def get_current_channel_user_mapping(self, guild: discord.Guild) -> Dict[ChannelName, list[UserID]]:
+    def get_current_channel_user_mapping(self, guild: discord.Guild) -> dict[ChannelName, list[UserID]]:
         channels_to_users = {}
         for channel in guild.text_channels:
             if self.bot._is_bot_channel(channel.name):
@@ -153,19 +154,19 @@ class SubnetConfigManager:
                 channels_to_users[ChannelName(channel.name)] = users_in_channel
         return channels_to_users
     
-    def get_desired_channel_user_mapping(self) -> Dict[ChannelName, list[UserID]]:
+    def get_desired_channel_user_mapping(self) -> dict[ChannelName, list[UserID]]:
         channels_to_users = {}
         for subnet_config in self.subnets_config:
             channel_name = subnet_config.generate_channel_name()
             channels_to_users[channel_name] = subnet_config.maintainers_ids
         return channels_to_users
 
-    def determine_missing_and_unnecessary_users(self, current_member_ids: Set[UserID], desired_member_ids: Set[UserID]) -> Tuple[Set[UserID], Set[UserID]]:
+    def determine_missing_and_unnecessary_users(self, current_member_ids: set[UserID], desired_member_ids: set[UserID]) -> tuple[set[UserID], set[UserID]]:
         missing_users = desired_member_ids - current_member_ids
         users_to_remove = current_member_ids - desired_member_ids
         return missing_users, users_to_remove
     
-    def determine_missing_and_unnecessary_channels(self, current_channel_names: Set[ChannelName], desired_channel_names: Set[ChannelName]) -> Tuple[Set[ChannelName], Set[ChannelName]]:
+    def determine_missing_and_unnecessary_channels(self, current_channel_names: set[ChannelName], desired_channel_names: set[ChannelName]) -> tuple[set[ChannelName], set[ChannelName]]:
         missing_channels = desired_channel_names - current_channel_names
         channels_to_archieve = current_channel_names - desired_channel_names
         return missing_channels, channels_to_archieve

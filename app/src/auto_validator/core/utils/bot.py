@@ -1,5 +1,7 @@
-import redis
 import json
+
+import redis
+
 
 def trigger_bot_send_message(channel_name: str, message: str, realm: str):
     redis_client = redis.Redis(host='localhost', port=8379, db=0)
