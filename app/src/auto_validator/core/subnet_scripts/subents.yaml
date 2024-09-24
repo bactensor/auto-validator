@@ -1,0 +1,21 @@
+computehorde:
+    mainnet_netuid: 12
+    testnet_netuid: 147
+    hardware_description: 8GB RAM and good CPU with at least 4 cores but no GPU
+    owner_discord_id: 36581436117450112
+    maintaner_discord_ids:
+        - 201741436117450752
+        - 1248297458627252297
+    dumper_commands:
+        - ps awux
+        - docker ps
+        - uptime
+        - free -m
+    allowed_secrets:
+        - COMPUTEHORDE_TRUSTED_MINER_ADDRESS
+        - COMPUTEHORDE_WEB_ADMIN_PASSWORD
+        - SECRET_KEY
+        - POSTGRES_PASSWORD
+
+pretraining:
+    mainnet_netuid: 9
