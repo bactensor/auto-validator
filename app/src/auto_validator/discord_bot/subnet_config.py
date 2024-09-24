@@ -67,7 +67,7 @@ class DiscordSubnetConfigFactory:
 
 class SubnetConfigManager:
     """
-        This class provides funcionality for updating the config
+        This class provides functionality for updating the config
           and synchronizing it with the discord server state
     """
     def __init__(self, bot: discord.Client, logger: logging.Logger, config: dict[str, Any]):
@@ -115,7 +115,7 @@ class SubnetConfigManager:
         - Invites users that are not yet on the server but listed in the config.
         - Revokes users access if their ID is not listed on subnet config.
         - Creates channels that are not yet on the server but listed in the config.
-        - Archieves channels that are on the server but not listed in the config.
+        - Archives channels that are on the server but not listed in the config.
         """
 
         guild = await self.bot._get_guild_or_raise(int(self.config["GUILD_ID"]))
