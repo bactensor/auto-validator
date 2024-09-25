@@ -21,7 +21,7 @@ class UploadedFile(models.Model):
 
     def __str__(self):
         return f"{self.file_name!r}"
-    
+
     def get_full_url(self, request):
         """
         Return the full URL to the file, including the domain.

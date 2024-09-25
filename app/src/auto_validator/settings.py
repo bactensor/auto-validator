@@ -302,7 +302,7 @@ LOGGING = {
             "handlers": ["console", "bot"],
             "level": "INFO",
             "propagate": False,
-        }
+        },
     },
 }
 
@@ -424,4 +424,3 @@ DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN")
 GUILD_ID = int(env("GUILD_ID"))
 BOT_NAME = env("BOT_NAME")
 CATEGORY_NAME = env("CATEGORY_NAME")
-
