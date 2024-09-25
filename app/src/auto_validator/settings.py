@@ -426,12 +426,9 @@ PAPERSPACE_API_KEY = env("PAPERSPACE_API_KEY", default="")
 
 SIGNATURE_EXPIRE_DURATION = env("SIGNATURE_EXPIRE_DURATION", default="300")
 
-LOCAL_SUBNETS_SCRIPTS_PATH = env("LOCAL_SUBNETS_SCRIPTS_PATH", default=root("auto_validator/core/subnet_scripts"))
-
-
-
 DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN", default="")
 GUILD_ID = env("GUILD_ID", default="")
 BOT_NAME = env("BOT_NAME", default="")
 CATEGORY_NAME = env("CATEGORY_NAME", default="")
 
+LOCAL_SUBNETS_SCRIPTS_PATH = env("LOCAL_SUBNETS_SCRIPTS_PATH", default=root("auto_validator/core/subnet_scripts"))
