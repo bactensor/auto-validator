@@ -412,3 +412,4 @@ LINODE_API_KEY = env("LINODE_API_KEY", default="")
 PAPERSPACE_API_KEY = env("PAPERSPACE_API_KEY", default="")
 
 SIGNATURE_EXPIRE_DURATION = env("SIGNATURE_EXPIRE_DURATION", default="300")
+LOCAL_SUBNETS_SCRIPTS_PATH = env("LOCAL_SUBNETS_SCRIPTS_PATH", default=root("auto_validator/core/subnet_scripts"))
