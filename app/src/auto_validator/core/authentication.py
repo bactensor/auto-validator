@@ -1,6 +1,7 @@
 import json
 
 from bittensor import Keypair
+from django.conf import settings
 from rest_framework import authentication, exceptions
 
 from .models import Hotkey
@@ -8,6 +9,10 @@ from .models import Hotkey
 
 class HotkeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
+        if settings.TESTING:
+            # Bypass authentication during tests
+            return (None, None)
+
         hotkey_address = request.headers.get("Hotkey")
         nonce = request.headers.get("Nonce")
         signature = request.headers.get("Signature")

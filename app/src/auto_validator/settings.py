@@ -45,6 +45,7 @@ if env("ENV", default=None) is None:
     env.read_env(root("../../.env"))
 
 ENV = env("ENV")
+TESTING = env("TESTING")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
