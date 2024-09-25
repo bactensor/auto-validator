@@ -29,6 +29,8 @@ dependencies = [
     "scp>=0.15.0",
     "discord.py==2.4.0",
     "python-dotenv>=1.0.1",
+    "paramiko>=3.5.0",
+    "scp>=0.15.0",
 ]
 
 [build-system]
