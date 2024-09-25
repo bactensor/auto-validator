@@ -13,7 +13,7 @@ from auto_validator.core.models import (
     UploadedFile,
     ValidatorInstance,
 )
-from auto_validator.core.utils.utils import fetch_and_compare_subnets
+from auto_validator.core.utils.utils import fetch_and_compare_subnets, install_validator_on_remote_server
 
 admin.site.site_header = "auto_validator Administration"
 admin.site.site_title = "auto_validator"
@@ -106,6 +106,27 @@ class SubnetSlotAdmin(admin.ModelAdmin):
     is_registered.boolean = True
     is_registered.admin_order_field = "is_registered_sort"
     is_registered.short_description = "Is Registered"
+
+    def install_validator(self, request, queryset):
+        if queryset.count() > 1:
+            self.message_user(request, "Please select only one subnet slot.", level="ERROR")
+            return
+        subnet_slot = queryset.first()
+        # change the IP address to the actual IP address of the server
+        # change the username to the actual username of the server
+        # change the path to the actual path of the private key
+        # change the passphrase to the actual passphrase of the private key
+        install_validator_on_remote_server(
+            subnet_slot.subnet.codename,
+            subnet_slot.blockchain,
+            subnet_slot.netuid,
+            "219.15.67.27",
+            "root",
+            "/root/.ssh/id_rsa",
+            "1234567890",
+        )
+
+    actions = [install_validator]
 
 
 @admin.register(ValidatorInstance)
