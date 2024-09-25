@@ -6,7 +6,7 @@ sudo apt update
 cd ~/.bittensor/subtensor/
 sudo docker-compose down
 
-cd ~/.bittensor/subnets/compute_horde_validator/
+cd ~/.bittensor/subnets/computehorde/
 sudo docker-compose down
 
 # Rhef, action here --> we securely pull down this file with sshpass and sftp server: r-sn12-docker-compose.blob and overwrite: ~/.bittensor/subnets/compute_horde_validator/docker-compose.yml

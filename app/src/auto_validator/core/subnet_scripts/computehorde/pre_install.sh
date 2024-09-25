@@ -23,8 +23,8 @@ for i in {1..10}; do echo; echo "now try sudo apt update, and if error, do stuff
 # possible fix for 
 # https://stackoverflow.com/questions/56218562/how-to-fix-modulenotfounderror-no-module-named-apt-pkg
 
-mkdir ~/.bittensor/subnets/compute_horde_validator/
-cd ~/.bittensor/subnets/compute_horde_validator/
+mkdir ~/.bittensor/subnets/computehorde/
+cd ~/.bittensor/subnets/computehorde/
 
 # Rhef, action here --> we securely pull down this file with sshpass and sftp server: r-sn12-docker-compose.blob and overwrite: ~/.bittensor/subnets/compute_horde_validator/docker-compose.yml
 # Rhef, action here --> we securely pull down this file with sshpass and sftp server: r-sn12-dotenv.env and overwrite: ~/.bittensor/subnets/compute_horde_validator/.env
