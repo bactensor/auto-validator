@@ -18,7 +18,7 @@ python3 --version
 sudo apt install python-is-python3 -y
 python --version
 
-for i in {1..10}; do echo; echo "now try sudo apt update, and if error, do stuff in link or sudo apt remove python3-apt then sudo apt install python3-apt and then try sudo apt update again, maybe a reboot inbetween!!!!!!!!!!"; echo; done
+for i in {1..10}; do echo; echo "now try sudo apt update, and if error, do stuff in link or sudo apt remove python3-apt then sudo apt install python3-apt and then try sudo apt update again, maybe a reboot in between!!!!!!!!!!"; echo; done
 
 # possible fix for 
 # https://stackoverflow.com/questions/56218562/how-to-fix-modulenotfounderror-no-module-named-apt-pkg
