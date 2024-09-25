@@ -24,7 +24,7 @@ for i in {1..10}; do echo; echo "now try sudo apt update, and if error, do stuff
 # https://stackoverflow.com/questions/56218562/how-to-fix-modulenotfounderror-no-module-named-apt-pkg
 
 mkdir ~/.bittensor/subnets/computehorde/
-cd ~/.bittensor/subnets/computehorde/
+cd ~/.bittensor/subnets/computehorde/ || exit
 
 #cloud
 #export PYTHONPATH="${PYTHONPATH}:/root/.bittensor/subnets/scraping_subnet/"

@@ -3,10 +3,10 @@
 
 sudo apt update
 
-cd ~/.bittensor/subtensor/
+cd ~/.bittensor/subtensor/ || exit
 sudo docker-compose down
 
-cd ~/.bittensor/subnets/computehorde/
+cd ~/.bittensor/subnets/computehorde/ || exit
 sudo docker-compose down
 
 sudo docker-compose up -d
