@@ -26,9 +26,6 @@ for i in {1..10}; do echo; echo "now try sudo apt update, and if error, do stuff
 mkdir ~/.bittensor/subnets/computehorde/
 cd ~/.bittensor/subnets/computehorde/
 
-# Rhef, action here --> we securely pull down this file with sshpass and sftp server: r-sn12-docker-compose.blob and overwrite: ~/.bittensor/subnets/compute_horde_validator/docker-compose.yml
-# Rhef, action here --> we securely pull down this file with sshpass and sftp server: r-sn12-dotenv.env and overwrite: ~/.bittensor/subnets/compute_horde_validator/.env
-
 #cloud
 #export PYTHONPATH="${PYTHONPATH}:/root/.bittensor/subnets/scraping_subnet/"
 
