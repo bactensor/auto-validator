@@ -45,6 +45,7 @@ if env("ENV", default=None) is None:
     env.read_env(root("../../.env"))
 
 ENV = env("ENV")
+TESTING = env("TESTING", default=False)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
@@ -75,6 +76,7 @@ INSTALLED_APPS = [
     "fingerprint",
     "storages",
     "auto_validator.core",
+    "auto_validator.discord_bot",
 ]
 
 
@@ -260,6 +262,12 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "main",
         },
+        "bot": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": root("logs/bot.log"),
+            "formatter": "main",
+        },
     },
     "root": {
         "handlers": ["console"],
@@ -289,6 +297,11 @@ LOGGING = {
         },
         "psycopg.pq": {
             # only logs unavailable libs during psycopg initialization
+            "propagate": False,
+        },
+        "bot": {
+            "handlers": ["console", "bot"],
+            "level": "INFO",
             "propagate": False,
         },
     },
@@ -402,8 +415,13 @@ STORAGES = {
 
 BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
 
-SUBNETS_GITHUB_URL = env(
-    "SUBNETS_GITHUB_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
+SUBNET_CONFIG_URL = env(
+    "SUBNET_CONFIG_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
 )
 
 LINODE_API_KEY = ""
+
+DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN")
+GUILD_ID = env("GUILD_ID")
+BOT_NAME = env("BOT_NAME")
+CATEGORY_NAME = env("CATEGORY_NAME")

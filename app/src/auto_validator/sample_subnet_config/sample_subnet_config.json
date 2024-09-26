@@ -1,0 +1,22 @@
+{
+    "subnets": [
+        {
+            "maintainers_ids": [123, 456],
+            "subnet_codename": "sub1",
+            "netuid": 1,
+            "realm": "mainnet"
+        },
+        {
+            "maintainers_ids": [123],
+            "subnet_codename": "sub2",
+            "netuid": 2,
+            "realm": "devnet"
+        },
+        {
+            "maintainers_ids": [456],
+            "subnet_codename": "sub1",
+            "netuid": 1,
+            "realm": "testnet"
+        }
+    ]
+}
