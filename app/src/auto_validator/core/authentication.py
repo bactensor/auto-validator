@@ -1,4 +1,5 @@
 import json
+import time
 
 from bittensor import Keypair
 from django.conf import settings
@@ -9,16 +10,22 @@ from .models import Hotkey
 
 class HotkeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
-        if settings.TESTING:
-            # Bypass authentication during tests
-            return (None, None)
-
         hotkey_address = request.headers.get("Hotkey")
         nonce = request.headers.get("Nonce")
         signature = request.headers.get("Signature")
+        method = request.method.upper()
+        url = request.build_absolute_uri()
+
+        if method == "GET":
+            return (None, None)
 
         if not hotkey_address or not nonce or not signature:
             raise exceptions.AuthenticationFailed("Missing authentication headers.")
+
+        nonce_float = float(nonce)
+        current_time = time.time()
+        if abs(current_time - nonce_float) > int(settings.SIGNATURE_EXPIRE_DURATION):
+            raise exceptions.AuthenticationFailed("Invalid nonce")
 
         if not Hotkey.objects.filter(hotkey=hotkey_address).exists():
             raise exceptions.AuthenticationFailed("Unauthorized hotkey.")
@@ -33,8 +40,6 @@ class HotkeyAuthentication(authentication.BaseAuthentication):
         client_headers = {k: v for k, v in client_headers.items() if v is not None}
         headers_str = json.dumps(client_headers, sort_keys=True)
 
-        method = request.method.upper()
-        url = request.build_absolute_uri()
         data_to_sign = f"{method}{url}{headers_str}"
 
         if "file" in request.FILES:

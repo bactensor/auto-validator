@@ -10,6 +10,7 @@ from auto_validator.core.models import Hotkey, UploadedFile
 
 V1_FILES_URL = "/api/v1/files/"
 
+
 @pytest.mark.django_db
 def test_file_upload_with_valid_signature(api_client, wallet, validator_instance):
     file_content = io.BytesIO(b"file content")
@@ -22,6 +23,7 @@ def test_file_upload_with_valid_signature(api_client, wallet, validator_instance
     headers = {}
     headers["Note"] = ""
     headers["SubnetID"] = "1"
+    headers["Realm"] = "testserver"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = wallet.hotkey.ss58_address
     headers_str = json.dumps(headers, sort_keys=True)
@@ -40,7 +42,7 @@ def test_file_upload_with_valid_signature(api_client, wallet, validator_instance
     assert response_data["file_size"] == 12
     assert response_data["description"] == ""
     assert re.match(
-        r"^/media/"
+        r"^http://testserver/media/"
         + validator_instance.subnet_slot.subnet.name
         + r"-"
         + str(validator_instance.subnet_slot.netuid)
@@ -69,6 +71,7 @@ def test_file_upload_with_invalid_signature(api_client, wallet, validator_instan
     headers = {}
     headers["Note"] = ""
     headers["SubnetID"] = "1"
+    headers["Realm"] = "testserver"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = wallet.hotkey.ss58_address
     headers["Signature"] = "invalid_signature"
@@ -88,6 +91,7 @@ def test_file_upload_with_missing_hotkey(api_client):
     headers = {}
     headers["Note"] = ""
     headers["SubnetID"] = "1"
+    headers["Realm"] = "testserver"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = ""
     headers["Signature"] = "invalid_signature"
@@ -107,12 +111,13 @@ def test_file_upload_with_invalid_hotkey(api_client, wallet):
     headers = {}
     headers["Note"] = ""
     headers["SubnetID"] = "1"
+    headers["Realm"] = "testserver"
     headers["Nonce"] = str(time.time())
     headers["Hotkey"] = "123"
     headers["Signature"] = "invalid_signature"
     response = api_client.post(V1_FILES_URL, file_data, format="multipart", headers=headers)
 
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR or status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -133,11 +138,11 @@ def test_list_files(api_client, hotkey):
     assert response_data[0]["file_name"] == "file1.txt"
     assert response_data[0]["file_size"] == 1
     assert response_data[0]["description"] == ""
-    assert re.match(r"^/media/file1.txt$", response_data[0]["url"])
+    assert re.match(r"^http://testserver/media/file1.txt$", response_data[0]["url"])
     assert response_data[1]["file_name"] == "file2.txt"
     assert response_data[1]["file_size"] == 2
     assert response_data[1]["description"] == ""
-    assert re.match(r"^/media/file2.txt$", response_data[1]["url"])
+    assert re.match(r"^http://testserver/media/file2.txt$", response_data[1]["url"])
 
 
 @pytest.mark.django_db
