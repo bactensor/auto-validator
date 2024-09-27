@@ -14,12 +14,18 @@ def uploaded_file_size_validator(value):
 
 class UploadedFileSerializer(serializers.ModelSerializer):
     file = serializers.FileField(write_only=True, validators=[uploaded_file_size_validator])
-    url = serializers.URLField(read_only=True)
+    url = serializers.SerializerMethodField()
 
     class Meta:
         model = UploadedFile
         fields = ("file_name", "file_size", "description", "url", "file")
         read_only_fields = ("file_name", "file_size", "created_at")
+
+    def get_url(self, obj):
+        request = self.context.get("request")
+        if request:
+            return obj.get_full_url(request)
+        return obj.url
 
     def create(self, validated_data):
         file = validated_data.pop("file")

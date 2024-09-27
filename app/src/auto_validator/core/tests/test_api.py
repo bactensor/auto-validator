@@ -10,7 +10,6 @@ from auto_validator.core.models import Hotkey, UploadedFile
 
 V1_FILES_URL = "/api/v1/files/"
 
-
 @pytest.mark.django_db
 def test_file_upload_with_valid_signature(api_client, wallet, validator_instance):
     file_content = io.BytesIO(b"file content")
@@ -19,6 +18,7 @@ def test_file_upload_with_valid_signature(api_client, wallet, validator_instance
     file_data = {
         "file": file_content,
     }
+
     headers = {}
     headers["Note"] = ""
     headers["SubnetID"] = "1"

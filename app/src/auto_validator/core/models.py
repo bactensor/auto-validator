@@ -24,6 +24,13 @@ class UploadedFile(models.Model):
     def __str__(self):
         return f"{self.file_name!r} uploaded by {self.hotkey}"
 
+    def get_full_url(self, request):
+        """
+        Return the full URL to the file, including the domain.
+        """
+        relative_url = default_storage.url(self.storage_file_name)
+        return request.build_absolute_uri(relative_url)
+
     @property
     def url(self):
         return default_storage.url(self.storage_file_name)
