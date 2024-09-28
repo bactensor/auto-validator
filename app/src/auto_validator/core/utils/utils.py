@@ -54,22 +54,3 @@ def get_subnet_by_hotkey(hotkey_ss58, ip_address):
     except ValidatorInstance.DoesNotExist:
         return None
     return validator.subnet_slot.subnet
-
-
-def send_messages(subnet, subnet_identifier):
-    """
-    This function sends messages to subnet operators.
-    Args:   subnet: Subnet object
-            subnet_identifier: SubnetID
-    """
-    # send message to subnet operators
-    pass
-
-
-def get_user_ip(request):
-    ip_address = request.META.get("HTTP_X_FORWARDED_FOR")
-    if ip_address:
-        ip_address = ip_address.split(",")[0]
-    else:
-        ip_address = request.META.get("REMOTE_ADDR")
-    return ip_address
