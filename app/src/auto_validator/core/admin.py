@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.db.models import Case, IntegerField, Value, When
+from django.shortcuts import redirect
+from django.urls import path, reverse
 from rest_framework.authtoken.admin import TokenAdmin
 
 from auto_validator.core.models import (
@@ -11,6 +13,7 @@ from auto_validator.core.models import (
     UploadedFile,
     ValidatorInstance,
 )
+from auto_validator.core.utils.utils import fetch_and_compare_subnets
 
 admin.site.site_header = "auto_validator Administration"
 admin.site.site_title = "auto_validator"
@@ -21,8 +24,8 @@ TokenAdmin.raw_id_fields = ["user"]
 
 @admin.register(UploadedFile)
 class UploadedFileAdmin(admin.ModelAdmin):
-    list_display = ("file_name", "file_size", "created_at")
-    list_filter = ("created_at", "file_size")
+    list_display = ("file_name", "file_size", "hotkey", "description", "created_at")
+    list_filter = ("hotkey", "created_at", "file_size")
     search_fields = ("file_name",)
 
 
@@ -31,9 +34,31 @@ class SubnetAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "description",
+        "mainnet_id",
+        "testnet_id",
+        "owner_nick",
         "registered_networks",
     )
     search_fields = ("name", "slots__netuid")
+
+    def create_server(self, request, queryset):
+        subnet = queryset.first()
+        return redirect("admin:select_provider", subnet_id=subnet.id)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path("sync-subnets/", self.admin_site.admin_view(self.sync_subnet), name="sync_subnets"),
+        ]
+        return custom_urls + urls
+
+    def sync_subnet(self, request):
+        return fetch_and_compare_subnets(request)
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["sync_subnets_url"] = reverse("admin:sync_subnets")
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(SubnetSlot)

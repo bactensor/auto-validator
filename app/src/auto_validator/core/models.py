@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.db import models
@@ -10,6 +11,7 @@ def validate_hotkey_length(value):
 
 
 class UploadedFile(models.Model):
+    hotkey = models.ForeignKey("Hotkey", on_delete=models.CASCADE)
     file_name = models.CharField(max_length=4095)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -20,7 +22,7 @@ class UploadedFile(models.Model):
     file_size = models.PositiveBigIntegerField(db_comment="File size in bytes")
 
     def __str__(self):
-        return f"{self.file_name!r}"
+        return f"{self.file_name!r} uploaded by {self.hotkey}"
 
     def get_full_url(self, request):
         """
@@ -46,6 +48,14 @@ class Subnet(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)
+    codename = models.CharField(max_length=255, null=True, blank=True)
+    mainnet_id = models.IntegerField(null=True, blank=True)
+    testnet_id = models.IntegerField(null=True, blank=True)
+    owner_nick = models.CharField(max_length=255, null=True, blank=True)
+    owner_id = models.CharField(max_length=255, null=True, blank=True)
+    maintainers_ids = ArrayField(models.CharField(max_length=255), null=True, blank=True)
+    github_repo = models.CharField(max_length=255, null=True, blank=True)
+    hw_requirements = models.TextField(max_length=4095, null=True, blank=True)
 
     def registered_networks(self):
         mainnet_slots = self.slots.filter(

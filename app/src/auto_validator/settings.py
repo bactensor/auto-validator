@@ -14,6 +14,7 @@ import structlog
 root = environ.Path(__file__) - 2
 
 env = environ.Env(DEBUG=(bool, False))
+environ.Env.read_env()
 
 # .env file contents are not passed to docker image during build stage;
 # this results in errors if you require some env var to be set, as if in "env('MYVAR')" -
@@ -76,6 +77,7 @@ INSTALLED_APPS = [
     "fingerprint",
     "storages",
     "auto_validator.core",
+    "bootstrap5",
     "auto_validator.discord_bot",
 ]
 
@@ -415,13 +417,17 @@ STORAGES = {
 
 BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
 
-SUBNET_CONFIG_URL = env(
-    "SUBNET_CONFIG_URL", default="https://raw.githubusercontent.com/taostat/subnets-infos/main/subnets.json"
+SUBNETS_INFO_GITHUB_URL = env(
+    "SUBNETS_INFO_GITHUB_URL", default="https://raw.githubusercontent.com/drunest/subnets-info/main/subnets.json"
 )
 
-LINODE_API_KEY = ""
+LINODE_API_KEY = env("LINODE_API_KEY", default="")
+PAPERSPACE_API_KEY = env("PAPERSPACE_API_KEY", default="")
 
-DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN")
-GUILD_ID = env("GUILD_ID")
-BOT_NAME = env("BOT_NAME")
-CATEGORY_NAME = env("CATEGORY_NAME")
+SIGNATURE_EXPIRE_DURATION = env("SIGNATURE_EXPIRE_DURATION", default="300")
+
+
+DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN", default="")
+GUILD_ID = env("GUILD_ID", default="")
+BOT_NAME = env("BOT_NAME", default="")
+CATEGORY_NAME = env("CATEGORY_NAME", default="")
