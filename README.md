@@ -26,6 +26,7 @@ cd app/src
 pdm run manage.py wait_for_database --timeout 10
 pdm run manage.py migrate
 pdm run manage.py runserver
+pdm run manage.py run_bot
 ```
 
 # Setup production environment (git deployment)

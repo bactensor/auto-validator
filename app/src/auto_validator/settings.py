@@ -46,6 +46,7 @@ if env("ENV", default=None) is None:
     env.read_env(root("../../.env"))
 
 ENV = env("ENV")
+TESTING = env("TESTING", default=False)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
@@ -77,6 +78,7 @@ INSTALLED_APPS = [
     "storages",
     "auto_validator.core",
     "bootstrap5",
+    "auto_validator.discord_bot",
 ]
 
 
@@ -262,6 +264,12 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "main",
         },
+        "bot": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": root("logs/bot.log"),
+            "formatter": "main",
+        },
     },
     "root": {
         "handlers": ["console"],
@@ -291,6 +299,11 @@ LOGGING = {
         },
         "psycopg.pq": {
             # only logs unavailable libs during psycopg initialization
+            "propagate": False,
+        },
+        "bot": {
+            "handlers": ["console", "bot"],
+            "level": "INFO",
             "propagate": False,
         },
     },
@@ -412,4 +425,13 @@ LINODE_API_KEY = env("LINODE_API_KEY", default="")
 PAPERSPACE_API_KEY = env("PAPERSPACE_API_KEY", default="")
 
 SIGNATURE_EXPIRE_DURATION = env("SIGNATURE_EXPIRE_DURATION", default="300")
+
 LOCAL_SUBNETS_SCRIPTS_PATH = env("LOCAL_SUBNETS_SCRIPTS_PATH", default=root("auto_validator/core/subnet_scripts"))
+
+
+
+DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN", default="")
+GUILD_ID = env("GUILD_ID", default="")
+BOT_NAME = env("BOT_NAME", default="")
+CATEGORY_NAME = env("CATEGORY_NAME", default="")
+

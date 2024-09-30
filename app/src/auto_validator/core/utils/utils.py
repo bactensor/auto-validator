@@ -10,7 +10,7 @@ from django.conf import settings
 from django.shortcuts import redirect, render
 from scp import SCPClient
 
-from ..models import Hotkey, Server, Subnet, ValidatorInstance
+from ..models import Subnet
 
 GITHUB_URL = settings.SUBNETS_INFO_GITHUB_URL
 LOCAL_SUBNETS_SCRIPTS_PATH = settings.LOCAL_SUBNETS_SCRIPTS_PATH
@@ -50,26 +50,6 @@ def fetch_and_compare_subnets(request):
             "github_data": json.dumps(github_data),
         },
     )
-
-
-def get_subnet_by_hotkey(hotkey_ss58, ip_address):
-    try:
-        hotkey = Hotkey.objects.get(hotkey=hotkey_ss58)
-        server = Server.objects.get(ip_address=ip_address)
-        validator = ValidatorInstance.objects.get(hotkey=hotkey, server=server)
-    except ValidatorInstance.DoesNotExist:
-        return None
-    return validator.subnet_slot.subnet
-
-
-def send_messages(subnet, subnet_identifier):
-    """
-    This function sends messages to subnet operators.
-    Args:   subnet: Subnet object
-            subnet_identifier: SubnetID
-    """
-    # send message to subnet operators
-    pass
 
 
 def get_user_ip(request):
