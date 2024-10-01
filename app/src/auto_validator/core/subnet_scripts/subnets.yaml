@@ -16,6 +16,11 @@ computehorde:
         - COMPUTEHORDE_WEB_ADMIN_PASSWORD
         - SECRET_KEY
         - POSTGRES_PASSWORD
+    codename_list:
+        - '12'
+        - 'sn12'
+        - 'computehorde'
+        - 't147'
 
 pretraining:
     mainnet_netuid: 9
