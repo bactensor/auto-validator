@@ -2,7 +2,9 @@ import csv
 import difflib
 import json
 import os
+import subprocess
 
+import bittensor as bt
 import paramiko
 import requests
 import yaml
@@ -10,7 +12,7 @@ from django.conf import settings
 from django.shortcuts import redirect, render
 from scp import SCPClient
 
-from ..models import Subnet
+from ..models import Hotkey, Subnet
 
 GITHUB_URL = settings.SUBNETS_INFO_GITHUB_URL
 LOCAL_SUBNETS_SCRIPTS_PATH = settings.LOCAL_SUBNETS_SCRIPTS_PATH
@@ -91,12 +93,21 @@ def copy_files_to_remote(ssh, local_files, remote_path):
         copy_files_to_remote(ssh, ["/root/.bittensor/wallets/validator/hotkeys/validator-hotkey"], "~/.bittensor/wallets/validator/hotkeys/")
     """
     # Check if the remote path exists, if not, create it
-    stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_path}")
-    stdout.channel.recv_exit_status()  # Wait for the command to complete
+    if remote_path.endswith("/"):
+        stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_path}")
+        stdout.channel.recv_exit_status()  # Wait for the command to complete
+    else:
+        remote_dir = os.path.dirname(remote_path)
+        stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_dir}")
+        stdout.channel.recv_exit_status()
 
     with SCPClient(ssh.get_transport()) as scp:
         for local_file in local_files:
-            scp.put(local_file, remote_path)
+            if remote_path.endswith("/"):
+                scp.put(local_file, remote_path)
+            else:
+                scp.put(local_file, remote_path)
+                break  # If remote_path is a file, we only need to copy one file
 
 
 def generate_env_file_on_remote(
@@ -146,7 +157,10 @@ def generate_pre_config_file(subnet_codename: str, blockchain, netuid, yaml_file
         reader = csv.DictReader(csv_file)
         for row in reader:
             if row["SECRET_KEYS"] in allowed_secrets:
-                secrets[row["SECRET_KEYS"]] = row["SECRET_VALUES"]
+                if row["SECRET_VALUES"] == "random":
+                    secrets[row["SECRET_KEYS"]] = os.urandom(32).hex()
+                else:
+                    secrets[row["SECRET_KEYS"]] = row["SECRET_VALUES"]
     secrets["SUBNET_CODENAME"] = subnet_codename
     secrets["BITTENSOR_NETWORK"] = "finney" if blockchain == "mainnet" else "test"
     secrets["BITTENSOR_NETUID"] = netuid
@@ -157,34 +171,16 @@ def generate_pre_config_file(subnet_codename: str, blockchain, netuid, yaml_file
     return pre_config_path
 
 
-def generate_dumper_commands(subnet_codename, yaml_file_path, dumper_commands_file_path):
-    """
-    Generate dumper commands from the YAML file and write them to a file.
-
-    Args:
-        subnet_codename (str): Subnet codename.
-        yaml_file_path (str): Path to the YAML file.
-        dumper_commands_file_path (str): Path to the file to write the dumper commands.
-
-    Raises:
-        ValueError: If subnet_codename is not found in the YAML file.
-
-    Examples:
-        generate_dumper_commands("subnet1", "subnets.yaml", "dumper_commands.sh")
-    """
-    yaml_file_path = os.path.abspath(yaml_file_path)
-    with open(yaml_file_path) as file:
-        data = yaml.safe_load(file)
-    if subnet_codename not in data:
-        raise ValueError(f"Subnet codename {subnet_codename} not found in YAML file.")
-    commands = data[subnet_codename].get("dumper_commands", [])
-    with open(dumper_commands_file_path, "w") as file:
-        for command in commands:
-            file.write(f"{command}\n")
-
-
 def install_validator_on_remote_server(
-    subnet_codename, blockchain, netuid, ssh_ip_address, ssh_user, ssh_key_path, ssh_passphrase
+    subnet_codename,
+    blockchain,
+    netuid,
+    coldkey_path,
+    hotkey_name,
+    ssh_ip_address,
+    ssh_user,
+    ssh_key_path,
+    ssh_passphrase,
 ):
     """
     Install a validator on a remote server.
@@ -193,6 +189,8 @@ def install_validator_on_remote_server(
         subnet_codename (str): Subnet codename.
         blockchain (str): Blockchain name.
         netuid (str): NetUID.
+        coldkey_path (str): Coldkey path.
+        hotkey_name (str): Hotkey name.
         ssh_ip_address (str): SSH IP address.
         ssh_user (str): SSH username.
         ssh_key_path (str): SSH key path.
@@ -200,7 +198,7 @@ def install_validator_on_remote_server(
 
     Examples:
         install_validator_on_remote_server(
-            "subnet1", "mainnet", "1", "123.41.223.2", "root", "/root/.ssh/id_rsa", "passphrase"
+            "subnet1", "mainnet", "1", "/root/.bittensor/wallets/validator/", "validator-hotkey", "29.92.12.1", "root", "/root/.ssh/id_rsa", "1234567890"
         )
     """
     ssh = create_ssh_client(ssh_ip_address, ssh_user, ssh_key_path, ssh_passphrase)
@@ -208,13 +206,10 @@ def install_validator_on_remote_server(
     yaml_file_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/subnets.yaml"
     csv_file_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/secrets.csv"
 
-    local_hotkey_path = "/root/.bittensor/wallets/validator/hotkeys/validator-hotkey"
-    local_coldkeypub_path = "/root/.bittensor/wallets/validator/coldkeypub.txt"
+    local_hotkey_path = f"{coldkey_path}/hotkeys/{hotkey_name}"
+    local_coldkeypub_path = f"{coldkey_path}/coldkeypub.txt"
 
     generate_pre_config_file(subnet_codename, blockchain, netuid, yaml_file_path, csv_file_path)
-
-    dumper_commands_file_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/{subnet_codename}/dumper_commands.sh"
-    generate_dumper_commands(subnet_codename, yaml_file_path, dumper_commands_file_path)
 
     # Extract remote path from .env.template file
     local_env_template_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/{subnet_codename}/.env.template"
@@ -234,7 +229,7 @@ def install_validator_on_remote_server(
     local_files.append(local_generator_path)
     copy_files_to_remote(ssh, local_files, remote_path)
 
-    remote_hotkey_path = "~/.bittensor/wallets/validator/hotkeys/"
+    remote_hotkey_path = "~/.bittensor/wallets/validator/hotkeys/validator-hotkey"
     local_hotkey_file = [local_hotkey_path]
     copy_files_to_remote(ssh, local_hotkey_file, remote_hotkey_path)
 
@@ -250,10 +245,51 @@ def install_validator_on_remote_server(
     stdin, stdout, stderr = ssh.exec_command(f"bash {remote_path}/install.sh")
     print(stdout.read().decode())
     print(stderr.read().decode())
-
-    # Run install.sh on remote server
-    stdin, stdout, stderr = ssh.exec_command(f"bash {remote_path}/install.sh")
-    print(stdout.read().decode())
-    print(stderr.read().decode())
-
     ssh.close()
+
+
+def create_new_child_hotkey(netuid, wallet_name, parent_hotkey, child_hotkey, proportion):
+    """
+    Create a new child hotkey.
+
+    Args:
+        netuid (int): NetUID.
+        wallet_name (str): Wallet name.
+        parent_hotkey (str): Parent hotkey.
+        child_hotkey (str): Hotkey name.
+        proportion (float): proportion of the parent hotkey, (0, 1].
+
+    Examples:
+        create_new_child_hotkey("1", "validator", "validator-hotkey", "child-hotkey", "0.5")
+    """
+    commands = ["btcli", "wallet", "new_hotkey", "--wallet.name", wallet_name, "--wallet.hotkey", child_hotkey]
+    result = subprocess.run(commands, capture_output=True, text=True)
+    if result.stderr:
+        raise ValueError(result.stderr)
+    if not result.stdout:
+        raise ValueError("No output from btcli.")
+    child_wallet = bt.wallet(name=wallet_name, hotkey=child_hotkey)
+    parent_wallet = bt.wallet(name=wallet_name, hotkey=parent_hotkey)
+    commands = [
+        "btcli",
+        "stake",
+        "set_children",
+        "--netuid",
+        netuid,
+        "--children",
+        child_wallet.hotkey.ss58_address,
+        "--proportion",
+        proportion,
+        "--hotkey",
+        parent_wallet.hotkey.ss58_address,
+        "--wallet.name",
+        wallet_name,
+    ]
+    result = subprocess.run(commands, capture_output=True, text=True)
+    if result.stderr:
+        raise ValueError(result.stderr)
+    if not result.stdout:
+        raise ValueError("No output from btcli")
+
+    Hotkey.objects.create(hotkey=child_hotkey, parent=parent_hotkey)
+    return child_hotkey
