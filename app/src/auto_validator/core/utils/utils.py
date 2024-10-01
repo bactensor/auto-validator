@@ -291,5 +291,5 @@ def create_new_child_hotkey(netuid, wallet_name, parent_hotkey, child_hotkey, pr
     if not result.stdout:
         raise ValueError("No output from btcli")
 
-    Hotkey.objects.create(hotkey=child_hotkey, parent=parent_hotkey)
+    Hotkey.objects.create(hotkey=child_wallet.hotkey.ss58_address)
     return child_hotkey
