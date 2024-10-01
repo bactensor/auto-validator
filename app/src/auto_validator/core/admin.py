@@ -112,6 +112,8 @@ class SubnetSlotAdmin(admin.ModelAdmin):
             self.message_user(request, "Please select only one subnet slot.", level="ERROR")
             return
         subnet_slot = queryset.first()
+        # change the path to the actual path of the private key
+        # change the hotkey to the actual hotkey of the validator
         # change the IP address to the actual IP address of the server
         # change the username to the actual username of the server
         # change the path to the actual path of the private key
@@ -120,6 +122,8 @@ class SubnetSlotAdmin(admin.ModelAdmin):
             subnet_slot.subnet.codename,
             subnet_slot.blockchain,
             subnet_slot.netuid,
+            "/root/.bittensor/wallets/validator",
+            "validator-hotkey",
             "219.15.67.27",
             "root",
             "/root/.ssh/id_rsa",
