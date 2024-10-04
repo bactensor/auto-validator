@@ -67,32 +67,13 @@ class DumperCommandsViewSet(viewsets.ViewSet):
         try:
             with open(YAML_FILE_PATH) as file:
                 data = yaml.safe_load(file)
-                if subnet_identifier in data:
-                    return Response(data[subnet_identifier].get("dumper_commands", []))
-                else:
-                    return Response({"error": "subnet_identifier not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class NormalizedCodenameViewSet(viewsets.ViewSet):
-    parser_classes = [parsers.MultiPartParser]
-    permission_classes = [AllowAny]
-
-    def list(self, request):
-        subnet_identifier = request.headers.get("SubnetID")
-        if not subnet_identifier:
-            return Response({"error": "subnet_identifier is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            with open(YAML_FILE_PATH) as file:
-                data = yaml.safe_load(file)
                 codename_lower = subnet_identifier.lower()
                 for normalized_codename, sn_config in data.items():
                     codenames = sn_config.get("codename_list", [])
                     if codename_lower in map(str.lower, codenames):
-                        return Response(normalized_codename)
-                return Response({"error": "subnet_identifier not found"}, status=status.HTTP_404_NOT_FOUND)
+                        return Response((normalized_codename, sn_config.get("dumper_commands", [])))
+                else:
+                    return Response({"error": "subnet_identifier not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -108,4 +89,3 @@ class APIRouter(routers.DefaultRouter):
 router = APIRouter()
 router.register(r"files", FilesViewSet, basename="file")
 router.register(r"commands", DumperCommandsViewSet, basename="commands")
-router.register(r"codename", NormalizedCodenameViewSet, basename="codename")
