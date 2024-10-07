@@ -4,6 +4,7 @@ Django settings for auto_validator project.
 
 import inspect
 import logging
+import pathlib
 from datetime import timedelta
 from functools import wraps
 
@@ -431,4 +432,15 @@ GUILD_ID = env("GUILD_ID", default="")
 BOT_NAME = env("BOT_NAME", default="")
 CATEGORY_NAME = env("CATEGORY_NAME", default="")
 
-LOCAL_SUBNETS_SCRIPTS_PATH = env("LOCAL_SUBNETS_SCRIPTS_PATH", default=root("auto_validator/core/subnet_scripts"))
+BITTENSOR_WALLET_PATH = pathlib.Path(env("BITTENSOR_WALLET_PATH", default="/root/.bittensor/wallets"))
+BITTENSOR_WALLET_NAME = env("BITTENSOR_WALLET_NAME", default="validator")
+BITTENSOR_HOTKEY_NAME = env("BITTENSOR_HOTKEY_NAME", default="validator-hotkey")
+LOCAL_SUBNETS_SCRIPTS_PATH = pathlib.Path(
+    env("LOCAL_SUBNETS_SCRIPTS_PATH", default="auto_validator/core/subnet_scripts")
+)
+
+VALIDATOR_SECRET_VALUE_TYPES = {
+    "RANDOM": "random",
+    "HOTKEY_SS58_ADDRESS": "hotkey_ss58_address",
+    "IP_ADDRESS": "ip_address",
+}
