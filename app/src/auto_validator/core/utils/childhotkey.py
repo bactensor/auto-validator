@@ -35,9 +35,8 @@ class ChildHotkey:
         child_wallet_name: str,
         child_hotkey_name: str,
         proportion: float = 0.1,
-        child_wallet_path="~/.bittensor/wallets",
     ) -> str:
-        child_wallet = Wallet(name=child_wallet_name, hotkey=child_hotkey_name, path=".bittensor/wallets")
+        child_wallet = Wallet(name=child_wallet_name, hotkey=child_hotkey_name)
         if not child_wallet.coldkey_file.exists_on_device():
             child_wallet.create_new_coldkey(overwrite=False, use_password=False)
         if not child_wallet.hotkey_file.exists_on_device():
