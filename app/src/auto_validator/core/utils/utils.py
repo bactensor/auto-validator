@@ -2,23 +2,26 @@ import csv
 import difflib
 import json
 import os
-import subprocess
 
-import bittensor as bt
-import paramiko
+import bittensor as bt  # type: ignore
 import requests
 import yaml
-from django.conf import settings
-from django.shortcuts import redirect, render
-from scp import SCPClient
+from django.conf import settings  # type: ignore
+from django.http.response import HttpResponse, HttpResponseRedirect  # type: ignore
+from django.shortcuts import redirect, render  # type: ignore
 
-from ..models import Hotkey, Subnet
+from ..models import Subnet
+from .ssh import SSH_Manager
 
 GITHUB_URL = settings.SUBNETS_INFO_GITHUB_URL
 LOCAL_SUBNETS_SCRIPTS_PATH = settings.LOCAL_SUBNETS_SCRIPTS_PATH
+BITTENSOR_WALLET_PATH = settings.BITTENSOR_WALLET_PATH
+BITTENSOR_WALLET_NAME = settings.BITTENSOR_WALLET_NAME
+BITTENSOR_HOTKEY_NAME = settings.BITTENSOR_HOTKEY_NAME
+VALIDATOR_SECRET_VALUE_TYPES = settings.VALIDATOR_SECRET_VALUE_TYPES
 
 
-def fetch_and_compare_subnets(request):
+def fetch_and_compare_subnets(request: requests.Request) -> requests.Response | HttpResponse | HttpResponseRedirect:
     response = requests.get(GITHUB_URL, timeout=30)
     if response.status_code != 200:
         return render(request, "admin/sync_error.html", {"error": "Failed to fetch data from GitHub."})
@@ -54,7 +57,7 @@ def fetch_and_compare_subnets(request):
     )
 
 
-def get_user_ip(request):
+def get_user_ip(request: requests.Request) -> str:
     ip_address = request.META.get("HTTP_X_FORWARDED_FOR")
     if ip_address:
         ip_address = ip_address.split(",")[0]
@@ -63,86 +66,9 @@ def get_user_ip(request):
     return ip_address
 
 
-def create_ssh_client(ssh_ip_address, ssh_user, ssh_key_path, ssh_passphrase):
-    """
-    Create an SSH client.
-
-    Args:
-        ssh_ip_address (str): SSH IP address.
-        ssh_user (str): SSH username.
-        ssh_key_path (str): SSH key path.
-        ssh_passphrase (str): SSH passphrase.
-    Examples:
-        create_ssh_client("123.41.223.12", "root", "/root/.ssh/id_rsa", "passphrase")
-    """
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(ssh_ip_address, username=ssh_user, key_filename=ssh_key_path, passphrase=ssh_passphrase)
-    return ssh
-
-
-def copy_files_to_remote(ssh, local_files, remote_path):
-    """
-    Copy files to a remote server.
-
-    Args:
-        ssh: SSH client.
-        local_files (list): List of local files to copy.
-        remote_path (str): Remote path to copy the files.
-    Examples:
-        copy_files_to_remote(ssh, ["/root/.bittensor/wallets/validator/hotkeys/validator-hotkey"], "~/.bittensor/wallets/validator/hotkeys/")
-    """
-    # Check if the remote path exists, if not, create it
-    if remote_path.endswith("/"):
-        stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_path}")
-        stdout.channel.recv_exit_status()  # Wait for the command to complete
-    else:
-        remote_dir = os.path.dirname(remote_path)
-        stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_dir}")
-        stdout.channel.recv_exit_status()
-
-    with SCPClient(ssh.get_transport()) as scp:
-        for local_file in local_files:
-            if remote_path.endswith("/"):
-                scp.put(local_file, remote_path)
-            else:
-                scp.put(local_file, remote_path)
-                break  # If remote_path is a file, we only need to copy one file
-
-
-def generate_env_file_on_remote(
-    ssh, remote_generator_path, remote_env_template_path, remote_pre_config_path, remote_env_path
+def generate_pre_config_file(
+    subnet_codename: str, blockchain: str, netuid: int, remote_ip_address: str, yaml_file_path: str, csv_file_path: str
 ):
-    """
-    Generate .env file on a remote server.
-
-    Args:
-        ssh: SSH client.
-        remote_generator_path (str): Remote path to the generator script.
-        remote_env_template_path (str): Remote path to the .env.template file.
-        remote_pre_config_path (str): Remote path to the pre_config.json file.
-        remote_env_path (str): Remote path to the .env file.
-    Examples:
-        generate_env_file_on_remote(ssh, "/root/scripts/", "/root/scripts/.env.template", "/root/scripts/pre_config.json", "/root/scripts/.env")
-    """
-    command = f"python3 {os.path.join(remote_generator_path, 'generate_env.py')} {remote_env_template_path} {remote_pre_config_path} {remote_env_path}"
-    stdin, stdout, stderr = ssh.exec_command(command)
-    print(stdout.read().decode())
-    print(stderr.read().decode())
-
-
-def generate_pre_config_file(subnet_codename: str, blockchain, netuid, yaml_file_path: str, csv_file_path: str):
-    """
-    Generate pre_config.json file from the YAML file and CSV file.
-
-    Args:
-        subnet_codename (str): Subnet codename
-        yaml_file_path (str): Path to the YAML file
-        csv_file_path (str): Path to the CSV file
-
-    Examples:
-        generate_pre_config_file("subnet1", "mainnet", "1", "subnets.yaml", "secrets.csv")
-    """
     yaml_file_path = os.path.abspath(yaml_file_path)
     csv_file_path = os.path.abspath(csv_file_path)
     pre_config_path = os.path.abspath(f"{LOCAL_SUBNETS_SCRIPTS_PATH}/{subnet_codename}/pre_config.json")
@@ -157,12 +83,23 @@ def generate_pre_config_file(subnet_codename: str, blockchain, netuid, yaml_file
         reader = csv.DictReader(csv_file)
         for row in reader:
             if row["SECRET_KEYS"] in allowed_secrets:
-                if row["SECRET_VALUES"] == "random":
+                if row["SECRET_VALUES"] == VALIDATOR_SECRET_VALUE_TYPES.get("RANDOM"):
                     secrets[row["SECRET_KEYS"]] = os.urandom(32).hex()
+                elif row["SECRET_VALUES"] == VALIDATOR_SECRET_VALUE_TYPES.get("HOTKEY_SS58_ADDRESS"):
+                    secrets[row["SECRET_KEYS"]] = bt.Wallet(
+                        name=BITTENSOR_WALLET_NAME, hotkey=BITTENSOR_HOTKEY_NAME
+                    ).hotkey.ss58_address
+                elif row["SECRET_VALUES"] == VALIDATOR_SECRET_VALUE_TYPES.get("IP_ADDRESS"):
+                    secrets[row["SECRET_KEYS"]] = remote_ip_address
                 else:
                     secrets[row["SECRET_KEYS"]] = row["SECRET_VALUES"]
     secrets["SUBNET_CODENAME"] = subnet_codename
     secrets["BITTENSOR_NETWORK"] = "finney" if blockchain == "mainnet" else "test"
+    secrets["BITTENSOR_CHAIN_ENDPOINT"] = (
+        "wss://entrypoint-finney.opentensor.ai:443"
+        if blockchain == "mainnet"
+        else "wss://test.finney.opentensor.ai:443"
+    )
     secrets["BITTENSOR_NETUID"] = netuid
 
     with open(pre_config_path, "w") as file:
@@ -172,124 +109,74 @@ def generate_pre_config_file(subnet_codename: str, blockchain, netuid, yaml_file
 
 
 def install_validator_on_remote_server(
-    subnet_codename,
-    blockchain,
-    netuid,
-    coldkey_path,
-    hotkey_name,
-    ssh_ip_address,
-    ssh_user,
-    ssh_key_path,
-    ssh_passphrase,
+    subnet_codename: str,
+    blockchain: str,
+    netuid: int,
+    ssh_ip_address: str,
+    ssh_user: str,
+    ssh_key_path: str,
+    ssh_passphrase: str,
 ):
-    """
-    Install a validator on a remote server.
+    yaml_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "subnets.yaml"
+    csv_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "secrets.csv"
 
-    Args:
-        subnet_codename (str): Subnet codename.
-        blockchain (str): Blockchain name.
-        netuid (str): NetUID.
-        coldkey_path (str): Coldkey path.
-        hotkey_name (str): Hotkey name.
-        ssh_ip_address (str): SSH IP address.
-        ssh_user (str): SSH username.
-        ssh_key_path (str): SSH key path.
-        ssh_passphrase (str): SSH passphrase.
+    local_hotkey_path = BITTENSOR_WALLET_PATH / BITTENSOR_WALLET_NAME / "hotkeys" / BITTENSOR_HOTKEY_NAME
+    local_coldkeypub_path = BITTENSOR_WALLET_PATH / BITTENSOR_WALLET_NAME / "coldkeypub.txt"
 
-    Examples:
-        install_validator_on_remote_server(
-            "subnet1", "mainnet", "1", "/root/.bittensor/wallets/validator/", "validator-hotkey", "29.92.12.1", "root", "/root/.ssh/id_rsa", "1234567890"
-        )
-    """
-    ssh = create_ssh_client(ssh_ip_address, ssh_user, ssh_key_path, ssh_passphrase)
-
-    yaml_file_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/subnets.yaml"
-    csv_file_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/secrets.csv"
-
-    local_hotkey_path = f"{coldkey_path}/hotkeys/{hotkey_name}"
-    local_coldkeypub_path = f"{coldkey_path}/coldkeypub.txt"
-
-    generate_pre_config_file(subnet_codename, blockchain, netuid, yaml_file_path, csv_file_path)
+    generate_pre_config_file(subnet_codename, blockchain, netuid, ssh_ip_address, yaml_file_path, csv_file_path)
 
     # Extract remote path from .env.template file
-    local_env_template_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/{subnet_codename}/.env.template"
+    local_env_template_path = LOCAL_SUBNETS_SCRIPTS_PATH / subnet_codename / ".env.template"
 
     with open(local_env_template_path) as env_file:
         for line in env_file:
             if line.startswith("TARGET_PATH"):
                 remote_path = line.split("=")[1].strip()
                 break
-    local_directory = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/{subnet_codename}/"
+    local_directory = str(LOCAL_SUBNETS_SCRIPTS_PATH / subnet_codename)
     local_files = [
         os.path.join(local_directory, file)
         for file in os.listdir(local_directory)
         if os.path.isfile(os.path.join(local_directory, file))
     ]
-    local_generator_path = f"{LOCAL_SUBNETS_SCRIPTS_PATH}/generate_env.py"
-    local_files.append(local_generator_path)
-    copy_files_to_remote(ssh, local_files, remote_path)
+    local_generator_path = LOCAL_SUBNETS_SCRIPTS_PATH / "generate_env.py"
+    local_files.append(str(local_generator_path))
+    with SSH_Manager(ssh_ip_address, ssh_user, ssh_key_path, ssh_passphrase) as ssh_manager:
+        ssh_manager.copy_files_to_remote(local_files, remote_path)
 
-    remote_hotkey_path = "~/.bittensor/wallets/validator/hotkeys/validator-hotkey"
-    local_hotkey_file = [local_hotkey_path]
-    copy_files_to_remote(ssh, local_hotkey_file, remote_hotkey_path)
+        remote_hotkey_path = "~/.bittensor/wallets/validator/hotkeys/validator-hotkey"
+        local_hotkey_file = [str(local_hotkey_path)]
+        ssh_manager.copy_files_to_remote(local_hotkey_file, remote_hotkey_path)
 
-    remote_coldkey_path = "~/.bittensor/wallets/validator/"
-    local_coldkey_file = [local_coldkeypub_path]
-    copy_files_to_remote(ssh, local_coldkey_file, remote_coldkey_path)
+        remote_coldkey_path = "~/.bittensor/wallets/validator/"
+        local_coldkey_file = [str(local_coldkeypub_path)]
+        ssh_manager.copy_files_to_remote(local_coldkey_file, remote_coldkey_path)
 
-    generate_env_file_on_remote(
-        ssh, remote_path, f"{remote_path}/.env.template", f"{remote_path}/pre_config.json", f"{remote_path}/.env"
-    )
+        # Generate .env file on remote server
+        remote_env_template_path = f"{remote_path}.env.template"
+        remote_pre_config_path = f"{remote_path}pre_config.json"
+        remote_env_path = f"{remote_path}.env"
+        command = f"python3 {os.path.join(remote_path, 'generate_env.py')} {remote_env_template_path} {remote_pre_config_path} {remote_env_path}"
+        ssh_manager.execute_command(command)
 
-    # Run pre_install.sh on remote server
-    stdin, stdout, stderr = ssh.exec_command(f"bash {remote_path}/install.sh")
-    print(stdout.read().decode())
-    print(stderr.read().decode())
-    ssh.close()
+        # Run pre_install.sh on remote server
+        ssh_manager.execute_command(f"bash {remote_path}/install.sh")
 
 
-def create_new_child_hotkey(netuid, wallet_name, parent_hotkey, child_hotkey, proportion):
+def get_dumper_commands(subnet_identifier: str, config_path: str) -> list:
     """
-    Create a new child hotkey.
-
-    Args:
-        netuid (int): NetUID.
-        wallet_name (str): Wallet name.
-        parent_hotkey (str): Parent hotkey.
-        child_hotkey (str): Hotkey name.
-        proportion (float): proportion of the parent hotkey, (0, 1].
+    Get dumper commands for a subnet with normalized subnet identifier.
 
     Examples:
-        create_new_child_hotkey("1", "validator", "validator-hotkey", "child-hotkey", "0.5")
+        >>> get_dumper_commands("sn1", "subnets.yaml")
     """
-    commands = ["btcli", "wallet", "new_hotkey", "--wallet.name", wallet_name, "--wallet.hotkey", child_hotkey]
-    result = subprocess.run(commands, capture_output=True, text=True)
-    if result.stderr:
-        raise ValueError(result.stderr)
-    if not result.stdout:
-        raise ValueError("No output from btcli.")
-    child_wallet = bt.wallet(name=wallet_name, hotkey=child_hotkey)
-    parent_wallet = bt.wallet(name=wallet_name, hotkey=parent_hotkey)
-    commands = [
-        "btcli",
-        "stake",
-        "set_children",
-        "--netuid",
-        netuid,
-        "--children",
-        child_wallet.hotkey.ss58_address,
-        "--proportion",
-        proportion,
-        "--hotkey",
-        parent_wallet.hotkey.ss58_address,
-        "--wallet.name",
-        wallet_name,
-    ]
-    result = subprocess.run(commands, capture_output=True, text=True)
-    if result.stderr:
-        raise ValueError(result.stderr)
-    if not result.stdout:
-        raise ValueError("No output from btcli")
-
-    Hotkey.objects.create(hotkey=child_wallet.hotkey.ss58_address)
-    return child_hotkey
+    with open(config_path) as file:
+        data = yaml.safe_load(file)
+        codename_lower = subnet_identifier.lower()
+        for codename, sn_config in data.items():
+            mainnet_netuid = sn_config.get("mainnet_netuid")
+            testnet_netuid = sn_config.get("testnet_netuid")
+            possible_codenames = [str(mainnet_netuid), "sn" + str(mainnet_netuid), str(testnet_netuid), codename]
+            if codename_lower in map(str.lower, possible_codenames):
+                return sn_config.get("dumper_commands", [])
+        return None
