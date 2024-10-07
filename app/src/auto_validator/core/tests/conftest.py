@@ -93,7 +93,7 @@ def wallet():
     password = "your_password_here"
 
     try:
-        wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
+        wallet = bt.Wallet(name=coldkey_name, hotkey=hotkey_name)
         wallet.coldkeypub  # make sure wallet has coldkey file, if not, it will raise an exception
         has_coldkey = True
         wallet.hotkey  # make sure wallet has hotkey file, if not, it will raise an exception
@@ -122,6 +122,6 @@ def wallet():
                 print("Timeout occurred while creating hotkey.")
             finally:
                 process.close()
-        wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
+        wallet = bt.Wallet(name=coldkey_name, hotkey=hotkey_name)
 
     return wallet
