@@ -1,7 +1,8 @@
 from collections.abc import Generator
 
+import bittensor as bt
+import pexpect
 import pytest
-from bittensor import Wallet
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
@@ -85,9 +86,42 @@ def eq():
 def wallet():
     coldkey_name = "auto-validator7"
     hotkey_name = "testhotkey7"
-    wallet = Wallet(name=coldkey_name, hotkey=hotkey_name)
-    if not wallet.coldkey_file.exists_on_device():
-        wallet.create_new_coldkey(overwrite=False, use_password=False)
-    if not wallet.hotkey_file.exists_on_device():
-        wallet.create_new_hotkey(overwrite=False, use_password=False)
+    command1 = f"btcli wallet new_coldkey --wallet.name {coldkey_name}"
+    command2 = f"btcli wallet new_hotkey --wallet.name {coldkey_name} --wallet.hotkey {hotkey_name}"
+    has_coldkey = False
+    has_hotkey = False
+    password = "your_password_here"
+
+    try:
+        wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
+        wallet.coldkeypub  # make sure wallet has coldkey file, if not, it will raise an exception
+        has_coldkey = True
+        wallet.hotkey  # make sure wallet has hotkey file, if not, it will raise an exception
+        has_hotkey = True
+    except bt.KeyFileError:
+        if not has_coldkey:
+            process = pexpect.spawn(command1, timeout=30)
+            try:
+                process.expect("Specify password for key encryption:")
+                process.sendline(password)
+
+                process.expect("Retype your password:")
+                process.sendline(password)
+
+                process.expect(pexpect.EOF)
+            except pexpect.TIMEOUT:
+                print("Timeout occurred while creating coldkey.")
+            finally:
+                process.close()
+
+        if not has_hotkey:
+            process = pexpect.spawn(command2, timeout=30)
+            try:
+                process.expect(pexpect.EOF)
+            except pexpect.TIMEOUT:
+                print("Timeout occurred while creating hotkey.")
+            finally:
+                process.close()
+        wallet = bt.wallet(name=coldkey_name, hotkey=hotkey_name)
+
     return wallet
