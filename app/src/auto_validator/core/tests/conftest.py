@@ -88,8 +88,8 @@ def wallet():
 
     wallet = bt.Wallet(name=coldkey_name, hotkey=hotkey_name, path=".bittensor/wallets")
     if not wallet.coldkey_file.exists_on_device():
-        wallet.create_new_coldkey(overwrite=False, use_password=False)
+        wallet.create_new_coldkey(overwrite=True, use_password=False)
     if not wallet.hotkey_file.exists_on_device():
-        wallet.create_new_hotkey(overwrite=False, use_password=False)
+        wallet.create_new_hotkey(overwrite=True, use_password=False)
 
     return wallet
