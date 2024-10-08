@@ -2,6 +2,7 @@ import csv
 import difflib
 import json
 import os
+import subprocess
 
 import bittensor as bt  # type: ignore
 import requests
@@ -9,12 +10,14 @@ import yaml
 from django.conf import settings  # type: ignore
 from django.http.response import HttpResponse, HttpResponseRedirect  # type: ignore
 from django.shortcuts import redirect, render  # type: ignore
+from git import GitCommandError, Repo
 
 from ..models import Subnet
 from .ssh import SSH_Manager
 
-GITHUB_URL = settings.SUBNETS_INFO_GITHUB_URL
+GITHUB_SUBNETS_CONFIG_PATH = settings.SUBNETS_INFO_GITHUB_URL
 LOCAL_SUBNETS_SCRIPTS_PATH = settings.LOCAL_SUBNETS_SCRIPTS_PATH
+GITHUB_SUBNETS_SCRIPTS_PATH = settings.GITHUB_SUBNETS_SCRIPTS_PATH
 BITTENSOR_WALLET_PATH = settings.BITTENSOR_WALLET_PATH
 BITTENSOR_WALLET_NAME = settings.BITTENSOR_WALLET_NAME
 BITTENSOR_HOTKEY_NAME = settings.BITTENSOR_HOTKEY_NAME
@@ -22,16 +25,31 @@ VALIDATOR_SECRET_VALUE_TYPES = settings.VALIDATOR_SECRET_VALUE_TYPES
 
 
 def fetch_and_compare_subnets(request: requests.Request) -> requests.Response | HttpResponse | HttpResponseRedirect:
-    response = requests.get(GITHUB_URL, timeout=30)
+    # Clone the subnet scripts repository using GitPython
+    try:
+        if os.path.exists(LOCAL_SUBNETS_SCRIPTS_PATH):
+            # If the directory already exists, remove it
+            subprocess.run(["rm", "-rf", LOCAL_SUBNETS_SCRIPTS_PATH], check=True)
+
+        Repo.clone_from(GITHUB_SUBNETS_SCRIPTS_PATH, LOCAL_SUBNETS_SCRIPTS_PATH)
+    except GitCommandError as e:
+        return render(request, "admin/sync_error.html", {"error": f"Error while cloning the repository: {e}"})
+
+    response = requests.get(GITHUB_SUBNETS_CONFIG_PATH, timeout=30)
     if response.status_code != 200:
         return render(request, "admin/sync_error.html", {"error": "Failed to fetch data from GitHub."})
 
-    github_data = response.json()
+    github_data = yaml.safe_load(response.text)
     db_data = list(Subnet.objects.values())
-
-    github_data = [subnet for subnet in github_data.values()]
+    github_data_list = []
+    for codename, subnet in github_data.items():
+        subnet["codename"] = codename
+        subnet.pop("bittensor_id", None)
+        subnet.pop("twitter", None)
+        github_data_list.append(subnet)
+    # github_data = [for codename, subnet in github_data.items()]
     db_data = [{k: v for k, v in subnet.items() if k != "id"} for subnet in db_data]
-    github_data_str = json.dumps(github_data, indent=2, sort_keys=True)
+    github_data_str = json.dumps(github_data_list, indent=2, sort_keys=True)
     db_data_str = json.dumps(db_data, indent=2, sort_keys=True)
 
     diff = difflib.unified_diff(
@@ -40,7 +58,7 @@ def fetch_and_compare_subnets(request: requests.Request) -> requests.Response | 
     diff_str = "\n".join(diff)
 
     if request.method == "POST":
-        new_data = list(github_data)
+        new_data = github_data_list
         for subnet_data in new_data:
             subnet, created = Subnet.objects.update_or_create(
                 codename=subnet_data.get("codename"), defaults=subnet_data
@@ -69,9 +87,9 @@ def get_user_ip(request: requests.Request) -> str:
 def generate_pre_config_file(
     subnet_codename: str, blockchain: str, netuid: int, remote_ip_address: str, yaml_file_path: str, csv_file_path: str
 ):
-    yaml_file_path = os.path.abspath(yaml_file_path)
-    csv_file_path = os.path.abspath(csv_file_path)
-    pre_config_path = os.path.abspath(f"{LOCAL_SUBNETS_SCRIPTS_PATH}/{subnet_codename}/pre_config.json")
+    yaml_file_path = os.path.expanduser(yaml_file_path)
+    csv_file_path = os.path.expanduser(csv_file_path)
+    pre_config_path = os.path.expanduser(f"{LOCAL_SUBNETS_SCRIPTS_PATH}/{subnet_codename}/pre_config.json")
     with open(yaml_file_path) as file:
         data = yaml.safe_load(file)
     if subnet_codename not in data:
@@ -117,8 +135,14 @@ def install_validator_on_remote_server(
     ssh_key_path: str,
     ssh_passphrase: str,
 ):
+    # try:
+    #     repo = Repo(LOCAL_SUBNETS_SCRIPTS_PATH)
+    #     origin = repo.remotes.origin
+    #     origin.pull("master")
+    # except GitCommandError as e:
+    #     raise ValueError(f"Error while pulling the repository: {e}")
     yaml_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "subnets.yaml"
-    csv_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "secrets.csv"
+    csv_file_path = os.path.abspath("../../secrets.csv")
 
     local_hotkey_path = BITTENSOR_WALLET_PATH / BITTENSOR_WALLET_NAME / "hotkeys" / BITTENSOR_HOTKEY_NAME
     local_coldkeypub_path = BITTENSOR_WALLET_PATH / BITTENSOR_WALLET_NAME / "coldkeypub.txt"
@@ -126,21 +150,21 @@ def install_validator_on_remote_server(
     generate_pre_config_file(subnet_codename, blockchain, netuid, ssh_ip_address, yaml_file_path, csv_file_path)
 
     # Extract remote path from .env.template file
-    local_env_template_path = LOCAL_SUBNETS_SCRIPTS_PATH / subnet_codename / ".env.template"
+    local_env_template_path = os.path.expanduser(LOCAL_SUBNETS_SCRIPTS_PATH / subnet_codename / ".env.template")
 
     with open(local_env_template_path) as env_file:
         for line in env_file:
             if line.startswith("TARGET_PATH"):
                 remote_path = line.split("=")[1].strip()
                 break
-    local_directory = str(LOCAL_SUBNETS_SCRIPTS_PATH / subnet_codename)
+    local_directory = os.path.expanduser(LOCAL_SUBNETS_SCRIPTS_PATH / subnet_codename)
     local_files = [
         os.path.join(local_directory, file)
         for file in os.listdir(local_directory)
         if os.path.isfile(os.path.join(local_directory, file))
     ]
-    local_generator_path = LOCAL_SUBNETS_SCRIPTS_PATH / "generate_env.py"
-    local_files.append(str(local_generator_path))
+    local_generator_path = os.path.abspath("auto_validator/core/utils/generate_env.py")
+    local_files.append(local_generator_path)
     with SSH_Manager(ssh_ip_address, ssh_user, ssh_key_path, ssh_passphrase) as ssh_manager:
         ssh_manager.copy_files_to_remote(local_files, remote_path)
 
@@ -160,7 +184,7 @@ def install_validator_on_remote_server(
         ssh_manager.execute_command(command)
 
         # Run pre_install.sh on remote server
-        ssh_manager.execute_command(f"bash {remote_path}/install.sh")
+        # ssh_manager.execute_command(f"bash {remote_path}/install.sh")
 
 
 def get_dumper_commands(subnet_identifier: str, config_path: str) -> list:

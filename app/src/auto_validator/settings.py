@@ -419,7 +419,8 @@ STORAGES = {
 BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
 
 SUBNETS_INFO_GITHUB_URL = env(
-    "SUBNETS_INFO_GITHUB_URL", default="https://raw.githubusercontent.com/drunest/subnets-info/main/subnets.json"
+    "SUBNETS_INFO_GITHUB_URL",
+    default="https://raw.githubusercontent.com/bactensor/bt-validator-scripts/master/subnets.yaml",
 )
 
 LINODE_API_KEY = env("LINODE_API_KEY", default="")
@@ -436,9 +437,12 @@ BITTENSOR_WALLET_PATH = pathlib.Path(env("BITTENSOR_WALLET_PATH", default="/root
 BITTENSOR_WALLET_NAME = env("BITTENSOR_WALLET_NAME", default="validator")
 BITTENSOR_HOTKEY_NAME = env("BITTENSOR_HOTKEY_NAME", default="validator-hotkey")
 LOCAL_SUBNETS_SCRIPTS_PATH = pathlib.Path(
-    env("LOCAL_SUBNETS_SCRIPTS_PATH", default="auto_validator/core/subnet_scripts")
+    env("LOCAL_SUBNETS_SCRIPTS_PATH", default="~/.bittensor/auto-validator-scripts")
 )
 
+GITHUB_SUBNETS_SCRIPTS_PATH = env(
+    "GITHUB_SUBNETS_SCRIPTS_PATH", default="https://github.com/bactensor/bt-validator-scripts.git"
+)
 VALIDATOR_SECRET_VALUE_TYPES = {
     "RANDOM": "random",
     "HOTKEY_SS58_ADDRESS": "hotkey_ss58_address",

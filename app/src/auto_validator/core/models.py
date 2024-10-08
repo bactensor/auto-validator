@@ -49,13 +49,15 @@ class Subnet(models.Model):
     description = models.TextField(null=True, blank=True)
     operators = models.ManyToManyField("Operator", related_name="subnets", blank=True)
     codename = models.CharField(max_length=255, null=True, blank=True)
-    mainnet_id = models.IntegerField(null=True, blank=True)
-    testnet_id = models.IntegerField(null=True, blank=True)
+    mainnet_netuid = models.IntegerField(null=True, blank=True)
+    testnet_netuid = models.IntegerField(null=True, blank=True)
     owner_nick = models.CharField(max_length=255, null=True, blank=True)
-    owner_id = models.CharField(max_length=255, null=True, blank=True)
-    maintainers_ids = ArrayField(models.CharField(max_length=255), null=True, blank=True)
+    owner_discord_id = models.CharField(max_length=255, null=True, blank=True)
+    maintainer_discord_ids = ArrayField(models.CharField(max_length=255), null=True, blank=True)
     github_repo = models.CharField(max_length=255, null=True, blank=True)
-    hw_requirements = models.TextField(max_length=4095, null=True, blank=True)
+    hardware_description = models.TextField(max_length=4095, null=True, blank=True)
+    allowed_secrets = ArrayField(models.CharField(max_length=255), null=True, blank=True)
+    dumper_commands = ArrayField(models.CharField(max_length=255), null=True, blank=True)
 
     def registered_networks(self):
         mainnet_slots = self.slots.filter(
