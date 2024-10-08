@@ -1,7 +1,6 @@
 from collections.abc import Generator
 
 import bittensor as bt
-import pexpect
 import pytest
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -87,10 +86,9 @@ def wallet():
     coldkey_name = "auto-validator7"
     hotkey_name = "testhotkey7"
 
-    wallet = bt.Wallet(name=coldkey_name, hotkey=hotkey_name)
+    wallet = bt.Wallet(name=coldkey_name, hotkey=hotkey_name, path=".bittensor/wallets")
     if not wallet.coldkey_file.exists_on_device():
         wallet.create_new_coldkey(overwrite=False, use_password=False)
-        
     if not wallet.hotkey_file.exists_on_device():
         wallet.create_new_hotkey(overwrite=False, use_password=False)
 
