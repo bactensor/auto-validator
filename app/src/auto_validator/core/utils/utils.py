@@ -135,12 +135,12 @@ def install_validator_on_remote_server(
     ssh_key_path: str,
     ssh_passphrase: str,
 ):
-    # try:
-    #     repo = Repo(LOCAL_SUBNETS_SCRIPTS_PATH)
-    #     origin = repo.remotes.origin
-    #     origin.pull("master")
-    # except GitCommandError as e:
-    #     raise ValueError(f"Error while pulling the repository: {e}")
+    try:
+        repo = Repo(LOCAL_SUBNETS_SCRIPTS_PATH)
+        origin = repo.remotes.origin
+        origin.pull("master")
+    except GitCommandError as e:
+        raise ValueError(f"Error while pulling the repository: {e}")
     yaml_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "subnets.yaml"
     csv_file_path = os.path.abspath("../../secrets.csv")
 
