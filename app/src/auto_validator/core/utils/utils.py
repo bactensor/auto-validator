@@ -2,7 +2,6 @@ import csv
 import difflib
 import json
 import os
-import subprocess
 
 import bittensor as bt  # type: ignore
 import requests
@@ -10,31 +9,28 @@ import yaml
 from django.conf import settings  # type: ignore
 from django.http.response import HttpResponse, HttpResponseRedirect  # type: ignore
 from django.shortcuts import redirect, render  # type: ignore
-from git import GitCommandError, Repo
 
 from ..models import Subnet
 from .ssh import SSH_Manager
 
 GITHUB_SUBNETS_CONFIG_PATH = settings.SUBNETS_INFO_GITHUB_URL
-LOCAL_SUBNETS_SCRIPTS_PATH = settings.LOCAL_SUBNETS_SCRIPTS_PATH
+LOCAL_SUBNETS_CONFIG_PATH = settings.LOCAL_SUBNETS_CONFIG_PATH
+
 GITHUB_SUBNETS_SCRIPTS_PATH = settings.GITHUB_SUBNETS_SCRIPTS_PATH
+LOCAL_SUBNETS_SCRIPTS_PATH = settings.LOCAL_SUBNETS_SCRIPTS_PATH
+
+GITHUB_VALIDATORS_CONFIG_PATH = settings.VALIDATORS_INFO_GITHUB_URL
+LOCAL_VALIDATORS_CONFIG_PATH = settings.LOCAL_VALIDATORS_CONFIG_PATH
+
 BITTENSOR_WALLET_PATH = settings.BITTENSOR_WALLET_PATH
 BITTENSOR_WALLET_NAME = settings.BITTENSOR_WALLET_NAME
 BITTENSOR_HOTKEY_NAME = settings.BITTENSOR_HOTKEY_NAME
 VALIDATOR_SECRET_VALUE_TYPES = settings.VALIDATOR_SECRET_VALUE_TYPES
+MAINNET_CHAIN_ENDPOINT = settings.MAINNET_CHAIN_ENDPOINT
+TESTNET_CHAIN_ENDPOINT = settings.TESTNET_CHAIN_ENDPOINT
 
 
 def fetch_and_compare_subnets(request: requests.Request) -> requests.Response | HttpResponse | HttpResponseRedirect:
-    # Clone the subnet scripts repository using GitPython
-    try:
-        if os.path.exists(LOCAL_SUBNETS_SCRIPTS_PATH):
-            # If the directory already exists, remove it
-            subprocess.run(["rm", "-rf", LOCAL_SUBNETS_SCRIPTS_PATH], check=True)
-
-        Repo.clone_from(GITHUB_SUBNETS_SCRIPTS_PATH, LOCAL_SUBNETS_SCRIPTS_PATH)
-    except GitCommandError as e:
-        return render(request, "admin/sync_error.html", {"error": f"Error while cloning the repository: {e}"})
-
     response = requests.get(GITHUB_SUBNETS_CONFIG_PATH, timeout=30)
     if response.status_code != 200:
         return render(request, "admin/sync_error.html", {"error": "Failed to fetch data from GitHub."})
@@ -93,7 +89,7 @@ def generate_pre_config_file(
     with open(yaml_file_path) as file:
         data = yaml.safe_load(file)
     if subnet_codename not in data:
-        raise ValueError(f"Subnet codename {subnet_codename} not found in YAML file.")
+        raise ValueError("Subnet codename %s not found in YAML file.", subnet_codename)
     allowed_secrets = data[subnet_codename].get("allowed_secrets", [])
 
     secrets = {}
@@ -113,11 +109,7 @@ def generate_pre_config_file(
                     secrets[row["SECRET_KEYS"]] = row["SECRET_VALUES"]
     secrets["SUBNET_CODENAME"] = subnet_codename
     secrets["BITTENSOR_NETWORK"] = "finney" if blockchain == "mainnet" else "test"
-    secrets["BITTENSOR_CHAIN_ENDPOINT"] = (
-        "wss://entrypoint-finney.opentensor.ai:443"
-        if blockchain == "mainnet"
-        else "wss://test.finney.opentensor.ai:443"
-    )
+    secrets["BITTENSOR_CHAIN_ENDPOINT"] = MAINNET_CHAIN_ENDPOINT if blockchain == "mainnet" else TESTNET_CHAIN_ENDPOINT
     secrets["BITTENSOR_NETUID"] = netuid
 
     with open(pre_config_path, "w") as file:
@@ -135,19 +127,15 @@ def install_validator_on_remote_server(
     ssh_key_path: str,
     ssh_passphrase: str,
 ):
-    try:
-        repo = Repo(LOCAL_SUBNETS_SCRIPTS_PATH)
-        origin = repo.remotes.origin
-        origin.pull("master")
-    except GitCommandError as e:
-        raise ValueError(f"Error while pulling the repository: {e}")
-    yaml_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "subnets.yaml"
+    subnet_config_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "subnets.yaml"
     csv_file_path = os.path.abspath("../../secrets.csv")
 
     local_hotkey_path = BITTENSOR_WALLET_PATH / BITTENSOR_WALLET_NAME / "hotkeys" / BITTENSOR_HOTKEY_NAME
     local_coldkeypub_path = BITTENSOR_WALLET_PATH / BITTENSOR_WALLET_NAME / "coldkeypub.txt"
 
-    generate_pre_config_file(subnet_codename, blockchain, netuid, ssh_ip_address, yaml_file_path, csv_file_path)
+    generate_pre_config_file(
+        subnet_codename, blockchain, netuid, ssh_ip_address, subnet_config_file_path, csv_file_path
+    )
 
     # Extract remote path from .env.template file
     local_env_template_path = os.path.expanduser(LOCAL_SUBNETS_SCRIPTS_PATH / subnet_codename / ".env.template")
@@ -177,14 +165,16 @@ def install_validator_on_remote_server(
         ssh_manager.copy_files_to_remote(local_coldkey_file, remote_coldkey_path)
 
         # Generate .env file on remote server
-        remote_env_template_path = f"{remote_path}.env.template"
-        remote_pre_config_path = f"{remote_path}pre_config.json"
-        remote_env_path = f"{remote_path}.env"
+        remote_env_template_path = os.path.join(remote_path, ".env.template")
+        remote_pre_config_path = os.path.join(remote_path, "pre_config.json")
+        remote_env_path = os.path.join(remote_path, ".env")
         command = f"python3 {os.path.join(remote_path, 'generate_env.py')} {remote_env_template_path} {remote_pre_config_path} {remote_env_path}"
         ssh_manager.execute_command(command)
+        ssh_manager.logger.info(command)
 
-        # Run pre_install.sh on remote server
-        # ssh_manager.execute_command(f"bash {remote_path}/install.sh")
+        # Run install.sh on remote server
+        remote_install_script_path = os.path.join(remote_path, "pre_install.sh")
+        ssh_manager.execute_command(f"bash {remote_install_script_path}")
 
 
 def get_dumper_commands(subnet_identifier: str, config_path: str) -> list:
