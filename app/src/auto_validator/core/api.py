@@ -72,10 +72,10 @@ class DumperCommandsViewSet(viewsets.ViewSet):
 
         dumper_commands = get_dumper_commands(subnet_identifier, SUBNETS_CONFIG_PATH)
         if dumper_commands is not None:
-            logger.info(f"SubnetID: {subnet_identifier}, dumper_commands: {dumper_commands}")
+            logger.info("SubnetID: %s, dumper_commands: %s", subnet_identifier, dumper_commands)
             return Response(dumper_commands)
         else:
-            logger.error(f"SubnetID: {subnet_identifier} not found")
+            logger.error("SubnetID: %s not found", subnet_identifier)
             return Response({"error": "SubnetID not found"}, status=status.HTTP_404_NOT_FOUND)
 
 

@@ -12,7 +12,7 @@ class SSH_Manager:
         self.username = username
         self.key_filename = key_filename
         self.passphrase = passphrase
-        self.logger = logging.getLogger("console")
+        self.logger = logging.getLogger(__name__)
 
     def connect(self) -> bool:
         try:
@@ -26,22 +26,19 @@ class SSH_Manager:
                 passphrase=self.passphrase,
             )
         except Exception as e:
-            self.logger.exception(f"SSH Execute Command Error: {e}")
+            self.logger.exception("SSH Execute Command Error: %s", e)
             return False
         return True
 
     def execute_command(self, command: str) -> str:
-        try:
-            stdin, stdout, stderr = self.client.exec_command(command)
-            stdout.channel.recv_exit_status()
-            if stderr.read().decode("utf-8"):
-                self.logger.error(f"Command: {command} failed with error: {stderr.read().decode('utf-8')}")
-                return ""
-            self.logger.info(f"Command: {command} executed successfully")
-            return stdout.read().decode("utf-8")
-        except Exception as e:
-            self.logger.exception(f"SSH Execute Command Error: {e}")
-            return ""
+        _, stdout, stderr = self.client.exec_command(command)
+        stdout.channel.recv_exit_status()
+        error_output = stderr.read().decode("utf-8")
+        if error_output:
+            self.logger.error("Command: %s failed with error: %s", command, error_output)
+            raise Exception(f"Command: {command} failed with error: {error_output}")
+        self.logger.info("Command: %s executed successfully", command)
+        return stdout.read().decode("utf-8")
 
     def close(self):
         self.client.close()
@@ -53,7 +50,7 @@ class SSH_Manager:
     def __exit__(self, type, value, traceback):
         self.close()
 
-    def copy_files_to_remote(self, local_files: str, remote_path: str) -> None:
+    def copy_files_to_remote(self, local_files: list, remote_path: str) -> None:
         # Check if the remote path exists, if not, create it
         if remote_path.endswith("/"):
             self.execute_command(f"mkdir -p {remote_path}")
@@ -66,6 +63,10 @@ class SSH_Manager:
         if self.client.get_transport() is None or not self.client.get_transport().is_active():
             raise Exception("SSH connection is not open")
 
+        # Ensure local_files is a list
+        if isinstance(local_files, str):
+            local_files = [local_files]
+
         with SCPClient(self.client.get_transport()) as scp:
             try:
                 for local_file in local_files:
@@ -75,6 +76,8 @@ class SSH_Manager:
                         break
                 self.logger.info("Files copied to remote server successfully")
             except SCPException as e:
-                self.logger.exception(f"SCP Error: {e}")
+                self.logger.exception("SCP Error: %s", e)
+                raise SCPException("SCP Error: %s", e)
             except OSError as e:
-                self.logger.exception(f"IOError: {e}")
+                self.logger.exception("IOError: %s", e)
+                raise OSError("IOError: %s", e)
