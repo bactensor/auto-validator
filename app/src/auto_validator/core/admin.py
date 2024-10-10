@@ -32,10 +32,9 @@ class UploadedFileAdmin(admin.ModelAdmin):
 @admin.register(Subnet)
 class SubnetAdmin(admin.ModelAdmin):
     list_display = (
-        "name",
-        "description",
-        "mainnet_id",
-        "testnet_id",
+        "codename",
+        "mainnet_netuid",
+        "testnet_netuid",
         "owner_nick",
         "registered_networks",
     )

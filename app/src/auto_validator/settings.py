@@ -4,6 +4,7 @@ Django settings for auto_validator project.
 
 import inspect
 import logging
+import pathlib
 from datetime import timedelta
 from functools import wraps
 
@@ -418,7 +419,8 @@ STORAGES = {
 BT_NETWORK_NAME = env("BT_NETWORK_NAME", default="finney")
 
 SUBNETS_INFO_GITHUB_URL = env(
-    "SUBNETS_INFO_GITHUB_URL", default="https://raw.githubusercontent.com/drunest/subnets-info/main/subnets.json"
+    "SUBNETS_INFO_GITHUB_URL",
+    default="https://raw.githubusercontent.com/bactensor/bt-validator-scripts/master/subnets.yaml",
 )
 
 LINODE_API_KEY = env("LINODE_API_KEY", default="")
@@ -426,8 +428,53 @@ PAPERSPACE_API_KEY = env("PAPERSPACE_API_KEY", default="")
 
 SIGNATURE_EXPIRE_DURATION = env("SIGNATURE_EXPIRE_DURATION", default="300")
 
-
 DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN", default="")
 GUILD_ID = env("GUILD_ID", default="")
 BOT_NAME = env("BOT_NAME", default="")
 CATEGORY_NAME = env("CATEGORY_NAME", default="")
+
+BITTENSOR_WALLET_PATH = pathlib.Path(env("BITTENSOR_WALLET_PATH", default="/root/.bittensor/wallets"))
+BITTENSOR_WALLET_NAME = env("BITTENSOR_WALLET_NAME", default="validator")
+BITTENSOR_HOTKEY_NAME = env("BITTENSOR_HOTKEY_NAME", default="validator-hotkey")
+
+LOCAL_SUBNETS_CONFIG_PATH = pathlib.Path(
+    env("LOCAL_SUBNETS_CONFIG_PATH", default="~/.config/auto-validator/subnets.yaml")
+)
+
+LOCAL_SUBNETS_SCRIPTS_PATH = pathlib.Path(
+    env("LOCAL_SUBNETS_SCRIPTS_PATH", default="~/.config/auto-validator/subnet-scripts")
+)
+
+LOCAL_VALIDATORS_CONFIG_PATH = pathlib.Path(
+    env("LOCAL_VALIDATORS_CONFIG_PATH", default="~/.config/auto-validator/validators.yaml")
+)
+
+GITHUB_SUBNETS_SCRIPTS_PATH = env(
+    "GITHUB_SUBNETS_SCRIPTS_PATH", default="https://github.com/bactensor/bt-validator-scripts.git"
+)
+
+GITHUB_SUBNETS_CONFIG_PATH = env(
+    "GITHUB_SUBNETS_CONFIG_PATH",
+    default="https://raw.githubusercontent.com/bactensor/bt-subnet-config/main/subnets.yaml",
+)
+
+GITHUB_VALIDATORS_CONFIG_PATH = env(
+    "GITHUB_VALIDATORS_CONFIG_PATH",
+    default="https://raw.githubusercontent.com/bactensor/bt-validator-config/main/validators.yaml",
+)
+
+VALIDATOR_SECRET_VALUE_TYPES = {
+    "RANDOM": "random",
+    "HOTKEY_SS58_ADDRESS": "hotkey_ss58_address",
+    "IP_ADDRESS": "ip_address",
+}
+
+MAINNET_CHAIN_ENDPOINT = env(
+    "MAINNET_CHAIN_ENDPOINT",
+    default="wss://entrypoint-finney.opentensor.ai:443",
+)
+
+TESTNET_CHAIN_ENDPOINT = env(
+    "TESTNET_CHAIN_ENDPOINT",
+    default="wss://test.finney.opentensor.ai:443",
+)
