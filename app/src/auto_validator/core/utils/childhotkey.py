@@ -8,6 +8,30 @@ from bittensor_cli import CLIManager
 from ..models import Hotkey
 
 
+class CLIManagerWrapper:
+    def __init__(self):
+        self.cli_manager = CLIManager()
+
+    def __enter__(self):
+        sys.stdin = StringIO("y\n")
+        return self
+
+    def __exit__(self, type, value, traceback):
+        sys.stdin = sys.__stdin__
+
+    def stake_revoke_children(self, *args, **kwargs):
+        result = self.cli_manager.stake_revoke_children(*args, **kwargs)
+        return result
+
+    def stake_get_children(self, *args, **kwargs):
+        result = self.cli_manager.stake_get_children(*args, **kwargs)
+        return result
+
+    def stake_set_children(self, *args, **kwargs):
+        result = self.cli_manager.stake_set_children(*args, **kwargs)
+        return result
+
+
 class ChildHotkey:
     def __init__(
         self, parent_wallet_name: str, parent_hotkey_name: str, parent_wallet_path: str = "~/.bittensor/wallets"
@@ -42,38 +66,38 @@ class ChildHotkey:
         if not child_wallet.hotkey_file.exists_on_device():
             child_wallet.create_new_hotkey(overwrite=False, use_password=False)
 
-        cli_manager = CLIManager()
-        sys.stdin = StringIO("y\n")
-        cli_manager.stake_set_children(
-            wallet_name=self.parent_wallet_name,
-            wallet_hotkey=self.parent_hotkey_name,
-            wallet_path=self.parent_wallet_path,
-            network=network,
-            netuid=netuid,
-            all_netuids=False,
-            children=[child_wallet.hotkey.ss58_address],
-            proportions=[proportion],
-            quiet=True,
-            verbose=False,
-            wait_for_finalization=True,
-            wait_for_inclusion=True,
-        )
-        sys.stdin = sys.__stdin__
+        cli_manager = CLIManagerWrapper()
+
+        with CLIManagerWrapper() as cli_manager:
+            cli_manager.stake_set_children(
+                wallet_name=self.parent_wallet_name,
+                wallet_hotkey=self.parent_hotkey_name,
+                wallet_path=self.parent_wallet_path,
+                network=network,
+                netuid=netuid,
+                all_netuids=False,
+                children=[child_wallet.hotkey.ss58_address],
+                proportions=[proportion],
+                quiet=True,
+                verbose=False,
+                wait_for_finalization=True,
+                wait_for_inclusion=True,
+            )
         Hotkey.objects.create(hotkey=child_wallet.hotkey.ss58_address)
         return child_wallet.hotkey.ss58_address
 
     def get_child_hotkeys(self, network: str, netuid: int):
-        cli_manager = CLIManager()
-        result = cli_manager.stake_get_children(
-            wallet_name=self.parent_wallet_name,
-            wallet_hotkey=self.parent_hotkey_name,
-            wallet_path=self.parent_wallet_path,
-            network=network,
-            netuid=netuid,
-            all_netuids=False,
-            quiet=True,
-            verbose=False,
-        )
+        with CLIManagerWrapper() as cli_manager:
+            result = cli_manager.stake_get_children(
+                wallet_name=self.parent_wallet_name,
+                wallet_hotkey=self.parent_hotkey_name,
+                wallet_path=self.parent_wallet_path,
+                network=network,
+                netuid=netuid,
+                all_netuids=False,
+                quiet=True,
+                verbose=False,
+            )
         return result
 
     def revoke_child_hotkeys(
@@ -81,19 +105,17 @@ class ChildHotkey:
         network: str,
         netuid: int,
     ) -> bool:
-        cli_manager = CLIManager()
-        sys.stdin = StringIO("y\n")
-        cli_manager.stake_revoke_children(
-            wallet_name=self.parent_wallet_name,
-            wallet_hotkey=self.parent_hotkey_name,
-            wallet_path=self.parent_wallet_path,
-            network=network,
-            netuid=netuid,
-            all_netuids=False,
-            quiet=True,
-            verbose=False,
-            wait_for_finalization=True,
-            wait_for_inclusion=True,
-        )
-        sys.stdin = sys.__stdin__
+        with CLIManagerWrapper() as cli_manager:
+            cli_manager.stake_revoke_children(
+                wallet_name=self.parent_wallet_name,
+                wallet_hotkey=self.parent_hotkey_name,
+                wallet_path=self.parent_wallet_path,
+                network=network,
+                netuid=netuid,
+                all_netuids=False,
+                quiet=True,
+                verbose=False,
+                wait_for_finalization=True,
+                wait_for_inclusion=True,
+            )
         return True

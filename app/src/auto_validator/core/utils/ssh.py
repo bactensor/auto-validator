@@ -26,7 +26,7 @@ class SSH_Manager:
                 passphrase=self.passphrase,
             )
         except Exception as e:
-            self.logger.exception("SSH Execute Command Error: %s", e)
+            self.logger.exception("SSH Connection Error: %s", e)
             return False
         return True
 
@@ -37,7 +37,7 @@ class SSH_Manager:
         if error_output:
             self.logger.error("Command: %s failed with error: %s", command, error_output)
             raise Exception(f"Command: {command} failed with error: {error_output}")
-        self.logger.info("Command: %s executed successfully", command)
+        self.logger.info("Command: %s executed successfully", stdout.read().decode("utf-8"))
         return stdout.read().decode("utf-8")
 
     def close(self):
@@ -63,10 +63,6 @@ class SSH_Manager:
         if self.client.get_transport() is None or not self.client.get_transport().is_active():
             raise Exception("SSH connection is not open")
 
-        # Ensure local_files is a list
-        if isinstance(local_files, str):
-            local_files = [local_files]
-
         with SCPClient(self.client.get_transport()) as scp:
             try:
                 for local_file in local_files:
@@ -77,7 +73,7 @@ class SSH_Manager:
                 self.logger.info("Files copied to remote server successfully")
             except SCPException as e:
                 self.logger.exception("SCP Error: %s", e)
-                raise SCPException("SCP Error: %s", e)
+                raise
             except OSError as e:
                 self.logger.exception("IOError: %s", e)
-                raise OSError("IOError: %s", e)
+                raise

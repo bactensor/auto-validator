@@ -2,6 +2,7 @@ import csv
 import difflib
 import json
 import os
+import pathlib
 
 import bittensor as bt  # type: ignore
 import requests
@@ -165,15 +166,16 @@ def install_validator_on_remote_server(
         ssh_manager.copy_files_to_remote(local_coldkey_file, remote_coldkey_path)
 
         # Generate .env file on remote server
-        remote_env_template_path = os.path.join(remote_path, ".env.template")
-        remote_pre_config_path = os.path.join(remote_path, "pre_config.json")
-        remote_env_path = os.path.join(remote_path, ".env")
+        remote = pathlib.Path(remote_path)
+        remote_env_template_path = remote / ".env.template"
+        remote_pre_config_path = remote / "pre_config.json"
+        remote_env_path = remote / ".env"
         command = f"python3 {os.path.join(remote_path, 'generate_env.py')} {remote_env_template_path} {remote_pre_config_path} {remote_env_path}"
         ssh_manager.execute_command(command)
         ssh_manager.logger.info(command)
 
         # Run install.sh on remote server
-        remote_install_script_path = os.path.join(remote_path, "install.sh")
+        remote_install_script_path = remote / "install.sh"
         ssh_manager.execute_command(f"bash {remote_install_script_path}")
 
 
