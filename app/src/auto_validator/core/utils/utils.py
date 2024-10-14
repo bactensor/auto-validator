@@ -127,7 +127,7 @@ def install_validator_on_remote_server(
     ssh_key_path: str,
     ssh_passphrase: str,
 ):
-    subnet_config_file_path = LOCAL_SUBNETS_SCRIPTS_PATH / "subnets.yaml"
+    subnet_config_file_path = LOCAL_SUBNETS_CONFIG_PATH
     csv_file_path = os.path.abspath("../../secrets.csv")
 
     local_hotkey_path = BITTENSOR_WALLET_PATH / BITTENSOR_WALLET_NAME / "hotkeys" / BITTENSOR_HOTKEY_NAME
@@ -173,7 +173,7 @@ def install_validator_on_remote_server(
         ssh_manager.logger.info(command)
 
         # Run install.sh on remote server
-        remote_install_script_path = os.path.join(remote_path, "pre_install.sh")
+        remote_install_script_path = os.path.join(remote_path, "install.sh")
         ssh_manager.execute_command(f"bash {remote_install_script_path}")
 
 
