@@ -127,7 +127,7 @@ def install_validator_on_remote_server(
     ssh_user: str,
     ssh_key_path: str,
     ssh_passphrase: str,
-):
+) -> dict:
     subnet_config_file_path = LOCAL_SUBNETS_CONFIG_PATH
     csv_file_path = os.path.abspath("../../secrets.csv")
 
@@ -171,12 +171,15 @@ def install_validator_on_remote_server(
         remote_pre_config_path = remote / "pre_config.json"
         remote_env_path = remote / ".env"
         command = f"python3 {os.path.join(remote_path, 'generate_env.py')} {remote_env_template_path} {remote_pre_config_path} {remote_env_path}"
-        ssh_manager.execute_command(command)
-        ssh_manager.logger.info(command)
+        try:
+            ssh_manager.execute_command(command)
 
-        # Run install.sh on remote server
-        remote_install_script_path = remote / "install.sh"
-        ssh_manager.execute_command(f"bash {remote_install_script_path}")
+            # Run install.sh on remote server
+            remote_install_script_path = remote / "install.sh"
+            ssh_manager.execute_command(f"bash {remote_install_script_path}")
+            return {"status": "success", "message": "Validator installed successfully."}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
 
 def get_dumper_commands(subnet_identifier: str, config_path: str) -> list:
