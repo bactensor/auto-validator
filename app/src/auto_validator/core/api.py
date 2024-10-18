@@ -1,6 +1,11 @@
-from rest_framework import mixins, parsers, routers, viewsets
+import logging
+import pathlib
+
+from django.conf import settings
+from rest_framework import mixins, parsers, routers, status, viewsets
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from auto_validator.core.models import Hotkey, Server, UploadedFile, ValidatorInstance
 from auto_validator.core.serializers import UploadedFileSerializer
@@ -8,6 +13,12 @@ from auto_validator.core.utils.utils import get_user_ip
 
 from .authentication import HotkeyAuthentication
 from .utils.bot import trigger_bot_send_message
+from .utils.utils import get_dumper_commands
+
+SUBNETS_CONFIG_PATH = pathlib.Path(settings.LOCAL_SUBNETS_SCRIPTS_PATH) / "subnets.yaml"
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class FilesViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -50,6 +61,24 @@ class FilesViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Gene
         )
 
 
+class DumperCommandsViewSet(viewsets.ViewSet):
+    parser_classes = [parsers.MultiPartParser]
+    permission_classes = [AllowAny]
+
+    def list(self, request):
+        subnet_identifier = request.headers.get("SubnetID")
+        if not subnet_identifier:
+            return Response({"error": "SubnetID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        dumper_commands = get_dumper_commands(subnet_identifier, SUBNETS_CONFIG_PATH)
+        if dumper_commands is not None:
+            logger.info("SubnetID: %s, dumper_commands: %s", subnet_identifier, dumper_commands)
+            return Response(dumper_commands)
+        else:
+            logger.error("SubnetID: %s not found", subnet_identifier)
+            return Response({"error": "SubnetID not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 class APIRootView(routers.DefaultRouter.APIRootView):
     description = "api-root"
 
@@ -60,3 +89,4 @@ class APIRouter(routers.DefaultRouter):
 
 router = APIRouter()
 router.register(r"files", FilesViewSet, basename="file")
+router.register(r"commands", DumperCommandsViewSet, basename="commands")
