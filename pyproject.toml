@@ -31,6 +31,7 @@ dependencies = [
     "bittensor-wallet>=2.0.1",
     "bittensor>=8.1.1",
     "gitpython>=3.1.43",
+    "django-celery-beat>=2.7.0",
 ]
 
 [build-system]

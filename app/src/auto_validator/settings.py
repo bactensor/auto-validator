@@ -80,6 +80,8 @@ INSTALLED_APPS = [
     "auto_validator.core",
     "bootstrap5",
     "auto_validator.discord_bot",
+    "django_celery_beat",
+    "auto_validator.validator_manager",
 ]
 
 
@@ -228,6 +230,10 @@ CELERY_BEAT_SCHEDULE = {  # type: ignore
     # },
     "update-validator-status": {
         "task": "auto_validator.core.tasks.schedule_update_validator_status",
+        "schedule": timedelta(seconds=60),
+    },
+    "sync_validators_task_validator_manager": {
+        "task": "auto_validator.validator_manager.tasks.sync_validators_task",
         "schedule": timedelta(seconds=60),
     },
 }
@@ -422,6 +428,8 @@ SUBNETS_INFO_GITHUB_URL = env(
     "SUBNETS_INFO_GITHUB_URL",
     default="https://raw.githubusercontent.com/bactensor/bt-validator-scripts/master/subnets.yaml",
 )
+
+VALIDATORS_INFO_GITHUB_URL = env("VALIDATORS_INFO_GITHUB_URL", default="")
 
 LINODE_API_KEY = env("LINODE_API_KEY", default="")
 PAPERSPACE_API_KEY = env("PAPERSPACE_API_KEY", default="")
