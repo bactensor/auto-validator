@@ -29,6 +29,13 @@ pdm run manage.py runserver
 pdm run manage.py run_bot
 ```
 
+# Setup validator manager auto-sync
+
+```sh
+pdm run celery -A auto_validator worker -l info
+pdm run celery -A auto_validator beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
+
 # Setup production environment (git deployment)
 
 <details>
